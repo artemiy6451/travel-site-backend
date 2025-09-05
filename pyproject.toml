@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "python-template"
+version = "0.1.0"
+description = "Python template with formater"
+authors = ["Kazantsev Artem <me@lokach.ru>"]
+readme = "README.md"
+package-mode=false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pre-commit = "^4.0.1"
+black = "^24.10.0"
+ruff = "^0.8.3"
+mypy = "^1.13.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 89
+include = '\.pyi?$'
+
+[tool.ruff]
+lint.select = ["F", "E", "W", "I", "N", "PL", "C", "B"]
+line-length = 89
+
+[tool.pytest.ini_options]
+pythonpath = [
+    ".", "app"
+]
