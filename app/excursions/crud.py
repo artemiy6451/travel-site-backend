@@ -4,6 +4,7 @@ from excursions.schemas import (
     ExcursionCreateScheme,
     ExcursionDetailsCreateScheme,
     ExcursionDetailsUpdateScheme,
+    ExcursionScheme,
     ExcursionUpdateScheme,
 )
 from fastapi import HTTPException
@@ -35,7 +36,8 @@ def get_excursions(
 
 @cached(ttl=300, key_prefix="excursion")
 def get_excursion(db: Session, excursion_id: int) -> Excursion | None:
-    return db.query(Excursion).filter(Excursion.id == excursion_id).first()
+    excursion = db.query(Excursion).filter(Excursion.id == excursion_id).first()
+    return excursion
 
 
 @cached(ttl=300, key_prefix="excursions_category")
