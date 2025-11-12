@@ -29,7 +29,7 @@ app.include_router(excursion_router)
 # Альтернативно - разрешить все origins (только для разработки!)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Разрешить все домены
+    allow_origins=["http://travelvv.ru", "https://travelvv.ru"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
