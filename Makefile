@@ -27,7 +27,7 @@ run:
 	poetry run python $(SRC)main.py
 
 dev:
-	poetry run fastapi dev $(SRC)main.py
+	poetry run fastapi dev $(SRC)main.py --host 0.0.0.0 --port 8000
 
 clean:
 	find . -type f -name "*.pyc" -delete

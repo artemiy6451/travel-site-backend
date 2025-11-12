@@ -12,16 +12,17 @@ from sqlalchemy.orm import Session
 
 login_router = APIRouter(tags=["Auth API"])
 
+
 # Регистрация пользователя
 @login_router.post("/register", response_model=UserSchema)
 def register(user: UserCreate, db: Session = Depends(get_db)) -> UserSchema:
     db_user = get_user_by_email(db, user.email)
     if db_user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
     return create_user(db, user)
+
 
 # Авторизация и получение токена
 @login_router.post("/login", response_model=Token)
@@ -43,8 +44,11 @@ def login(user: UserCreate, db: Session = Depends(get_db)) -> Token:
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": authenticated_user.email, "is_superuser": authenticated_user.is_superuser },
-        expires_delta=access_token_expires
+        data={
+            "sub": authenticated_user.email,
+            "is_superuser": authenticated_user.is_superuser,
+        },
+        expires_delta=access_token_expires,
     )
     return Token(access_token=access_token, token_type="bearer")
 
@@ -59,5 +63,5 @@ def check_admin_access(current_user: User = Depends(require_superuser)) -> dict:
     return {
         "status": "success",
         "message": "Admin access granted",
-        "user": current_user.email
+        "user": current_user.email,
     }
