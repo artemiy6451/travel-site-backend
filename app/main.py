@@ -21,12 +21,16 @@ async def lifespan(app: FastAPI) -> Any:
     redis_client.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title="Travelvv API",
+    version='1.0.0',
+    openapi_url="/api/openapi.json"
+)
 
 app.include_router(login_router)
 app.include_router(excursion_router)
 
-# Альтернативно - разрешить все origins (только для разработки!)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://travelvv.ru", "https://travelvv.ru"],
