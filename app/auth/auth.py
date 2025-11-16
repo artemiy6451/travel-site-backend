@@ -1,14 +1,12 @@
 import datetime
 from typing import Optional
 
+from config import settings
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-# Секретный ключ для JWT
-SECRET_KEY = "ttesttesttesttesttesttesttesttesttesttesttesttesttesttestest"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -32,7 +30,7 @@ def create_access_token(
             minutes=15
         )
     to_encode.update({"exp": expire, "is_superuser": data.get("is_superuser", False)})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -43,7 +41,7 @@ def verify_token(token: str) -> str:
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
         email = payload.get("sub")
         if email is None:
             raise credentials_exception

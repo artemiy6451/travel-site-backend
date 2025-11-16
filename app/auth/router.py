@@ -1,11 +1,12 @@
 from datetime import timedelta
 
-from auth.auth import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
+from auth.auth import create_access_token
 from auth.crud import authenticate_user, create_user, get_user_by_email
 from auth.depends import get_current_user, require_superuser
 from auth.models import User
 from auth.schemas import Token, UserCreate
 from auth.schemas import User as UserSchema
+from config import settings
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -42,7 +43,7 @@ def login(user: UserCreate, db: Session = Depends(get_db)) -> Token:
             detail="Access denied. Admin privileges required.",
         )
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
         data={
             "sub": authenticated_user.email,

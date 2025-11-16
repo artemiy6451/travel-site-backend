@@ -1,9 +1,14 @@
+from typing import Sequence
+
 from cache import cached, invalidate_cache
+from config import settings
 from excursions.models import Excursion, ExcursionDetails
 from excursions.schemas import (
     ExcursionCreateScheme,
     ExcursionDetailsCreateScheme,
+    ExcursionDetailsScheme,
     ExcursionDetailsUpdateScheme,
+    ExcursionFullScheme,
     ExcursionScheme,
     ExcursionUpdateScheme,
 )
@@ -12,7 +17,7 @@ from sqlalchemy.orm import Session, joinedload
 
 
 # GET запросы с кешированием
-@cached(ttl=300, key_prefix="excursions")
+@cached(ttl=settings.ttl, key_prefix="excursions")
 def get_excursions(
     db: Session,
     skip: int = 0,
@@ -20,7 +25,7 @@ def get_excursions(
     category: str | None = None,
     min_price: int | None = None,
     max_price: int | None = None,
-) -> list[Excursion]:
+) -> Sequence[ExcursionScheme]:
     query = db.query(Excursion)
 
     # Фильтры
@@ -34,18 +39,18 @@ def get_excursions(
     return query.offset(skip).limit(limit).all()
 
 
-@cached(ttl=300, key_prefix="excursion")
+@cached(ttl=settings.ttl, key_prefix="excursion")
 def get_excursion(db: Session, excursion_id: int) -> Excursion | None:
     excursion = db.query(Excursion).filter(Excursion.id == excursion_id).first()
     return excursion
 
 
-@cached(ttl=300, key_prefix="excursions_category")
-def get_excursions_by_category(db: Session, category: str) -> list[Excursion]:
+@cached(ttl=settings.ttl, key_prefix="excursions_category")
+def get_excursions_by_category(db: Session, category: str) -> Sequence[ExcursionScheme]:
     return db.query(Excursion).filter(Excursion.category == category).all()
 
 
-@cached(ttl=300, key_prefix="excursions_search")
+@cached(ttl=settings.ttl, key_prefix="excursions_search")
 def search_excursions(db: Session, search_term: str) -> list[Excursion]:
     return (
         db.query(Excursion)
@@ -57,7 +62,7 @@ def search_excursions(db: Session, search_term: str) -> list[Excursion]:
     )
 
 
-@cached(ttl=300, key_prefix="excursion_details")
+@cached(ttl=settings.ttl, key_prefix="excursion_details")
 def get_excursion_details(db: Session, excursion_id: int) -> ExcursionDetails | None:
     """Получить детальную информацию об экскурсии"""
     return (
@@ -67,7 +72,7 @@ def get_excursion_details(db: Session, excursion_id: int) -> ExcursionDetails | 
     )
 
 
-@cached(ttl=300, key_prefix="excursion_with_details")
+@cached(ttl=settings.ttl, key_prefix="excursion_with_details")
 def get_excursion_with_details(db: Session, excursion_id: int) -> Excursion | None:
     """Получить экскурсию вместе с детальной информацией"""
     return (
@@ -78,40 +83,38 @@ def get_excursion_with_details(db: Session, excursion_id: int) -> Excursion | No
     )
 
 
-@cached(ttl=300, key_prefix="excursion_full")
-def get_excursion_full_info(db: Session, excursion_id: int) -> dict:
+@cached(ttl=settings.ttl, key_prefix="excursion_full")
+def get_excursion_full_info(db: Session, excursion_id: int) -> ExcursionFullScheme:
     """Получить полную информацию об экскурсии (основная + детальная)"""
     excursion = get_excursion_with_details(db, excursion_id)
     if not excursion:
         raise HTTPException(status_code=404, detail="Excursion not found")
 
-    result = {
-        "id": excursion.id,
-        "title": excursion.title,
-        "category": excursion.category,
-        "description": excursion.description,
-        "date": excursion.date,
-        "price": excursion.price,
-        "duration": excursion.duration,
-        "people_amount": excursion.people_amount,
-        "people_left": excursion.people_left,
-        "is_active": excursion.is_active,
-        "image_url": excursion.image_url,
-        "details": None,
-    }
-
+    result = ExcursionFullScheme(
+        title=excursion.title,
+        category=excursion.category,
+        description=excursion.description,
+        date=excursion.date,
+        price=excursion.price,
+        duration=excursion.duration,
+        people_amount=excursion.people_amount,
+        people_left=excursion.people_left,
+        is_active=excursion.is_active,
+        image_url=excursion.image_url,
+        id=excursion.id,
+    )
     # Добавляем детальную информацию, если она есть
     if excursion.details:
-        result["details"] = {
-            "id": excursion.details.id,
-            "excursion_id": excursion.details.excursion_id,
-            "description": excursion.details.description,
-            "inclusions": excursion.details.inclusions,
-            "itinerary": excursion.details.itinerary,
-            "meeting_point": excursion.details.meeting_point,
-            "requirements": excursion.details.requirements,
-            "recommendations": excursion.details.recommendations,
-        }
+        result.details = ExcursionDetailsScheme(
+                description=excursion.details.description,
+                inclusions=excursion.details.inclusions,
+                itinerary=excursion.details.itinerary,
+                meeting_point=excursion.details.meeting_point,
+                requirements=excursion.details.requirements,
+                recommendations=excursion.details.recommendations,
+                id=excursion.details.id,
+                excursion_id=excursion.id,
+        )
 
     return result
 
@@ -167,6 +170,7 @@ def update_excursion(
 def delete_excursion(db: Session, excursion_id: int) -> bool:
     db_excursion = db.query(Excursion).filter(Excursion.id == excursion_id).first()
     if db_excursion:
+        delete_uploaded_file_by_url(db_excursion.image_url)
         db.delete(db_excursion)
         db.commit()
         return True

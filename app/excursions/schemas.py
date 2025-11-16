@@ -46,6 +46,9 @@ class ItineraryItem(BaseModel):
     title: str
     description: Optional[str] = None
 
+    class Config:
+        from_attributes = True
+
 
 class ExcursionDetailsBaseScheme(BaseModel):
     description: Optional[str] = None  # полное описание маршрута

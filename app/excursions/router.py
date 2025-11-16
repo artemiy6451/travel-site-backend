@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from auth.depends import require_superuser
 from auth.models import User
 from database import get_db
@@ -18,6 +20,7 @@ from excursions.crud import (
     update_excursion,
     update_excursion_details,
 )
+from excursions.files import save_uploaded_file
 from excursions.schemas import (
     ExcursionCreateScheme,
     ExcursionDetailsCreateScheme,
@@ -27,13 +30,13 @@ from excursions.schemas import (
     ExcursionScheme,
     ExcursionUpdateScheme,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 excursion_router = APIRouter(tags=["Excursion API"])
 
 
-@excursion_router.get("/excursions", response_model=list[ExcursionScheme])
+@excursion_router.get("/excursions", response_model=Sequence[ExcursionScheme])
 def read_excursions(
     skip: int = 0,
     limit: int = 100,
@@ -41,7 +44,7 @@ def read_excursions(
     min_price: int | None = Query(None, description="Минимальная цена"),
     max_price: int | None = Query(None, description="Максимальная цена"),
     db: Session = Depends(get_db),
-) -> list[ExcursionScheme]:
+) -> Sequence[ExcursionScheme]:
     """
     Получить список экскурсий с возможностью фильтрации
     """
@@ -113,11 +116,11 @@ def delete_existing_excursion(
 
 
 @excursion_router.get(
-    "/excursions/category/{category}", response_model=list[ExcursionScheme]
+    "/excursions/category/{category}", response_model=Sequence[ExcursionScheme]
 )
 def read_excursions_by_category(
     category: str, db: Session = Depends(get_db)
-) -> list[ExcursionScheme]:
+) -> Sequence[ExcursionScheme]:
     """
     Получить экскурсии по категории
     """
@@ -125,10 +128,10 @@ def read_excursions_by_category(
     return excursions
 
 
-@excursion_router.get("/excursions/search/", response_model=list[ExcursionScheme])
+@excursion_router.get("/excursions/search/", response_model=Sequence[ExcursionScheme])
 def search_excursions_by_term(
     q: str = Query(..., description="Поисковый запрос"), db: Session = Depends(get_db)
-) -> list[ExcursionScheme]:
+) -> Sequence[ExcursionScheme]:
     """
     Поиск экскурсий по названию и описанию
     """
@@ -142,7 +145,7 @@ def search_excursions_by_term(
 def toggle_excursion_active(
     excursion_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_superuser),
+    _: User = Depends(require_superuser),
 ) -> ExcursionScheme:
     """
     Переключить статус активности экскурсии
@@ -158,7 +161,7 @@ def add_people(
     excursion_id: int,
     people_count: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_superuser),
+    _: User = Depends(require_superuser),
 ) -> ExcursionCreateScheme:
     """
     Добавить определенное количество человек на маршрут
@@ -340,3 +343,29 @@ def get_excursion_requirements(
     if db_details is None or db_details.requirements is None:
         return []
     return db_details.requirements
+
+
+@excursion_router.post(
+    "/excursions/save_image",
+    summary="Сохранение картинки",
+    description="Сохранение картинки и возвращение url",
+    response_description="URL сохраненного изображения",
+)
+async def save_image(
+    image_file: UploadFile = File(..., description="Файл изображения для загрузки"),
+    _: User = Depends(require_superuser),
+) -> str:
+    """
+    Сохраняет загруженное изображение и возвращает его URL
+
+    - **image_file**: Файл изображения (поддерживаемые форматы: jpg, jpeg, png, webp)
+    """
+    try:
+        # Используем существующую функцию для сохранения файла
+        image_url = save_uploaded_file(image_file)
+        return image_url
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Ошибка при сохранении изображения: {str(e)}"
+        ) from Exception

@@ -1,5 +1,6 @@
-from auth.auth import ALGORITHM, SECRET_KEY
+from auth.auth import ALGORITHM
 from auth.models import User
+from config import settings
 from database import get_db
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -19,7 +20,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         is_superuser: bool = payload.get("is_superuser", False)
 

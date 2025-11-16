@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from database import Base, engine
 from sqlalchemy import JSON, ForeignKey, Text
@@ -48,7 +49,7 @@ class ExcursionDetails(Base):
     )  # ["Трансфер", "Гид", "Питание", ...]
 
     # Блок 4: Пошаговая программа тура
-    itinerary: Mapped[list[dict]] = mapped_column(
+    itinerary: Mapped[list[dict[str, Any]]] = mapped_column(
         JSON, nullable=True
     )  # [{"time": "09:00", "title": "Сбор группы", "description": "Описание..."}, ...]
 

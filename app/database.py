@@ -1,13 +1,12 @@
 from typing import Generator
 
+from config import settings
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./prod.db"
-
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
+    settings.database_url,
     connect_args={"check_same_thread": False},
     poolclass=NullPool,
     echo=False,
