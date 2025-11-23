@@ -13,6 +13,7 @@ class ExcursionBaseScheme(BaseModel):
     duration: int
     people_amount: int
     people_left: int
+    bus_number: int = 0
     is_active: bool
     image_url: str
 

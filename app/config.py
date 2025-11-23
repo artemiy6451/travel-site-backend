@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -11,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str = Field(default="")
     secret_key: str = Field(default="")
     access_token_expire_minutes: int = Field(default=30)
-    upload_dir: str = Field(default="static/")
+    upload_dir: Path = Field(default=Path("static/"))
     ttl: int = Field(default=300)
 
     class Config:
@@ -35,17 +36,9 @@ class Settings(BaseSettings):
                 "*",
             ]
         else:
-            # В production укажите ваш домен
             return ["https://travelvv.ru"]
 
-    @property
-    def upload_path(self) -> str:
-        """Полный путь к директории загрузок"""
-        return os.path.join(os.getcwd(), self.upload_dir)
 
-
-# Создаем глобальный экземпляр конфигурации
 settings = Settings()
 
-# Создаем директорию для загрузок при инициализации
-os.makedirs(settings.upload_path, exist_ok=True)
+os.makedirs(os.path.join(os.getcwd(),settings.upload_dir), exist_ok=True)

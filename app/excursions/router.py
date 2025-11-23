@@ -5,6 +5,7 @@ from auth.models import User
 from database import get_db
 from excursions.crud import (
     add_people_left,
+    change_bus_number_crud,
     create_excursion,
     create_excursion_details,
     create_or_update_excursion_details,
@@ -30,7 +31,7 @@ from excursions.schemas import (
     ExcursionScheme,
     ExcursionUpdateScheme,
 )
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 excursion_router = APIRouter(tags=["Excursion API"])
@@ -368,4 +369,28 @@ async def save_image(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Ошибка при сохранении изображения: {str(e)}"
+        ) from Exception
+
+
+@excursion_router.put(
+    "/excursions/{excursion_id}/bus-number",
+    response_model=ExcursionScheme,
+    status_code=status.HTTP_200_OK,
+    summary="Изменить номер автобуса экскурсии",
+    description="Обновляет номер автобуса для указанной экскурсии",
+)
+async def change_bus_number(
+    excursion_id: int,
+    bus_number: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_superuser),
+) -> ExcursionScheme:
+    try:
+        updated_bus_number = change_bus_number_crud(
+            db=db, excursion_id=excursion_id, bus_number=bus_number
+        )
+        return updated_bus_number
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Ошибка при обновление номера автобуса: {str(e)}"
         ) from Exception

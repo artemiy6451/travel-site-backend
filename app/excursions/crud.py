@@ -2,6 +2,7 @@ from typing import Sequence
 
 from cache import cached, invalidate_cache
 from config import settings
+from excursions.files import delete_uploaded_file_by_url
 from excursions.models import Excursion, ExcursionDetails
 from excursions.schemas import (
     ExcursionCreateScheme,
@@ -12,7 +13,7 @@ from excursions.schemas import (
     ExcursionScheme,
     ExcursionUpdateScheme,
 )
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 
@@ -96,6 +97,7 @@ def get_excursion_full_info(db: Session, excursion_id: int) -> ExcursionFullSche
         description=excursion.description,
         date=excursion.date,
         price=excursion.price,
+        bus_number=excursion.bus_number,
         duration=excursion.duration,
         people_amount=excursion.people_amount,
         people_left=excursion.people_left,
@@ -106,14 +108,14 @@ def get_excursion_full_info(db: Session, excursion_id: int) -> ExcursionFullSche
     # Добавляем детальную информацию, если она есть
     if excursion.details:
         result.details = ExcursionDetailsScheme(
-                description=excursion.details.description,
-                inclusions=excursion.details.inclusions,
-                itinerary=excursion.details.itinerary,
-                meeting_point=excursion.details.meeting_point,
-                requirements=excursion.details.requirements,
-                recommendations=excursion.details.recommendations,
-                id=excursion.details.id,
-                excursion_id=excursion.id,
+            description=excursion.details.description,
+            inclusions=excursion.details.inclusions,
+            itinerary=excursion.details.itinerary,
+            meeting_point=excursion.details.meeting_point,
+            requirements=excursion.details.requirements,
+            recommendations=excursion.details.recommendations,
+            id=excursion.details.id,
+            excursion_id=excursion.id,
         )
 
     return result
@@ -203,6 +205,32 @@ def add_people_left(
                 status_code=405, detail=f"Can not add {count_people} people, owerflow."
             )
         db_excursion.people_left = left
+        db.commit()
+        db.refresh(db_excursion)
+    return db_excursion
+
+
+@invalidate_cache("excursions*")
+@invalidate_cache("excursion*")
+@invalidate_cache("excursion_full*")
+def change_bus_number_crud(
+    db: Session, excursion_id: int, bus_number: int
+) -> ExcursionScheme:
+    db_excursion = db.query(Excursion).filter(Excursion.id == excursion_id).first()
+    if not db_excursion:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Экскурсия с ID {excursion_id} не найдена",
+        )
+
+    if bus_number < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Номер автобуса не может быть отрицательным",
+        )
+
+    if db_excursion:
+        db_excursion.bus_number = bus_number
         db.commit()
         db.refresh(db_excursion)
     return db_excursion
