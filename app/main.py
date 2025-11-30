@@ -9,6 +9,7 @@ from excursions.router import excursion_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from reviews import router as reviews_router
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ app = FastAPI(
 
 app.include_router(login_router)
 app.include_router(excursion_router)
+app.include_router(reviews_router.router)
 
 app.add_middleware(
     CORSMiddleware,

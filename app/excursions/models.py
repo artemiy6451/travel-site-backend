@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from database import Base, engine
+from reviews.models import Review
 from sqlalchemy import JSON, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +30,7 @@ class Excursion(Base):
         uselist=False,  # Одна запись деталей на экскурсию
         cascade="all, delete-orphan",
     )
+    reviews: Mapped["Review"] = relationship("Review", back_populates="excursion")
 
 
 class ExcursionDetails(Base):
