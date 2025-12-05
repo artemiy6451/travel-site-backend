@@ -9,7 +9,7 @@ class UserCreate(UserBase):
     password: str
 
     @field_validator("password")
-    def validate_password(cls, v):
+    def validate_password(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
         if len(v) > 72:
@@ -17,7 +17,7 @@ class UserCreate(UserBase):
         return v
 
 
-class User(UserBase):
+class UserSchema(UserBase):
     id: int
     is_active: bool
     is_superuser: bool

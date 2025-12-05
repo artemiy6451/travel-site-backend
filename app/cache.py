@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Optional
 
-from redis_config import redis_client
+from app.redis_config import redis_client
 
 logger = logging.getLogger(__name__)
 
