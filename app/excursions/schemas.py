@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel
 
@@ -32,6 +32,7 @@ class ExcursionUpdateScheme(BaseModel):
     people_amount: int | None
     people_left: int | None
     is_active: bool | None
+    bus_number: int | None
     image_url: str | None
 
 
@@ -43,21 +44,21 @@ class ExcursionScheme(ExcursionBaseScheme):
 
 
 class ItineraryItem(BaseModel):
-    time: Optional[str] = None
+    time: str | None = None
     title: str
-    description: Optional[str] = None
+    description: str | None = None
 
     class Config:
         from_attributes = True
 
 
 class ExcursionDetailsBaseScheme(BaseModel):
-    description: Optional[str] = None  # полное описание маршрута
-    inclusions: Optional[List[str]] = None  # что входит
-    itinerary: Optional[List[ItineraryItem]] = None  # пошаговая программа
-    meeting_point: Optional[str] = None  # место сбора
-    requirements: Optional[List[str]] = None  # требования
-    recommendations: Optional[List[str]] = None  # рекомендации
+    description: str | None = None
+    inclusions: List[str] | None = None
+    itinerary: List[ItineraryItem] | None = None
+    meeting_point: str | None = None
+    requirements: List[str] | None = None
+    recommendations: List[str] | None = None
 
 
 class ExcursionDetailsCreateScheme(ExcursionDetailsBaseScheme):
@@ -65,12 +66,12 @@ class ExcursionDetailsCreateScheme(ExcursionDetailsBaseScheme):
 
 
 class ExcursionDetailsUpdateScheme(BaseModel):
-    description: Optional[str] = None
-    inclusions: Optional[List[str]] = None
-    itinerary: Optional[List[ItineraryItem]] = None
-    meeting_point: Optional[str] = None
-    requirements: Optional[List[str]] = None
-    recommendations: Optional[List[str]] = None
+    description: str | None = None
+    inclusions: List[str] | None = None
+    itinerary: List[ItineraryItem] | None = None
+    meeting_point: str | None = None
+    requirements: List[str] | None = None
+    recommendations: List[str] | None = None
 
 
 class ExcursionDetailsScheme(ExcursionDetailsBaseScheme):
@@ -82,4 +83,4 @@ class ExcursionDetailsScheme(ExcursionDetailsBaseScheme):
 
 
 class ExcursionFullScheme(ExcursionScheme):
-    details: Optional[ExcursionDetailsScheme] = None
+    details: ExcursionDetailsScheme | None = None

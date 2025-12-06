@@ -1,31 +1,38 @@
-from database import Base
+from datetime import datetime
+
 from sqlalchemy import (
     Boolean,
-    Column,
     DateTime,
-    ForeignKey,
     Integer,
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
+from app.models import Base
+from app.reviews.schemas import ReviewSchema
 
-class Review(Base):
+
+class ReviewModel(Base):
     __tablename__ = "reviews"
 
-    id = Column(Integer, primary_key=True, index=True)
-    excursion_id = Column(
-        Integer, ForeignKey("excursions.id"), nullable=True, index=True
+    author_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    email: Mapped[str] = mapped_column(String(100), nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
-    author_name = Column(String(100), nullable=False)
-    email = Column(String(100), nullable=False)
-    rating = Column(Integer, nullable=False)  # 1-5
-    text = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    is_approved = Column(Boolean, default=False)  # прошел модерацию
-    is_active = Column(Boolean, default=True)  # не скрыт
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    # Связь с экскурсией (опционально)
-    excursion = relationship("Excursion", back_populates="reviews")
+    def to_read_model(self) -> ReviewSchema:
+        return ReviewSchema(
+            author_name=self.author_name,
+            email=self.email,
+            rating=self.rating,
+            text=self.text,
+            id=self.id,
+            created_at=self.created_at,
+            is_active=self.is_active,
+        )

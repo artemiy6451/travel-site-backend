@@ -5,16 +5,17 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 
-from config import settings
 from fastapi import HTTPException, UploadFile
 from PIL import Image
+
+from app.config import settings
 
 # Настройки для загрузки файлов
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 # Настройки сжатия
-COMPRESSION_SETTINGS = {
+COMPRESSION_SETTINGS: dict[str, dict[str, int | bool]] = {
     "jpg": {"quality": 85, "optimize": True},
     "jpeg": {"quality": 85, "optimize": True},
     "png": {"optimize": True},
@@ -40,7 +41,7 @@ def compress_image(image_content: bytes, file_extension: str) -> bytes:
 
         # Конвертируем в RGB если нужно (для JPEG)
         if image.mode in ("RGBA", "P"):
-            image = image.convert("RGB")
+            image = image.convert("RGB")  # type: ignore
 
         # Получаем оригинальные размеры
         original_width, original_height = image.size
@@ -57,8 +58,7 @@ def compress_image(image_content: bytes, file_extension: str) -> bytes:
 
         # Применяем настройки сжатия для формата
         compression_args = COMPRESSION_SETTINGS.get(
-            format_name,
-            COMPRESSION_SETTINGS.get("jpeg"),  # fallback
+            format_name, {"quality": 85, "optimize": True}
         )
 
         if format_name in ["jpeg", "jpg"]:
@@ -85,7 +85,7 @@ def compress_image(image_content: bytes, file_extension: str) -> bytes:
 
         return compressed_data
 
-    except Exception as e:
+    except Exception:
         return image_content
 
 
@@ -102,11 +102,17 @@ def should_compress_file(file_extension: str, file_size: int) -> bool:
 def save_uploaded_file(file: UploadFile) -> str:
     try:
         # Проверка расширения файла
+        if file.filename is None:
+            raise HTTPException(
+                status_code=400, detail="Can not upload file. No filename"
+            )
         file_extension = Path(file.filename).suffix.lower()
         if file_extension not in ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=400,
-                detail=f"Неподдерживаемый формат файла. Разрешены: {', '.join(ALLOWED_EXTENSIONS)}",
+                detail=f"""
+                Неподдерживаемый формат файла. Разрешены: {", ".join(ALLOWED_EXTENSIONS)}
+                """,
             )
 
         # Проверка размера файла
@@ -117,7 +123,10 @@ def save_uploaded_file(file: UploadFile) -> str:
         if file_size > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
-                detail=f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // 1024 // 1024}MB",
+                detail=f"""
+                Файл слишком большой.
+                Максимальный размер: {MAX_FILE_SIZE // 1024 // 1024}MB
+                """,
             )
 
         # Читаем содержимое файла для проверки хеша и возможного сжатия
@@ -194,7 +203,7 @@ def find_existing_file_by_hash(file_hash: str) -> str | None:
         return None
 
 
-def save_file_hash_mapping(file_hash: str, filename: str):
+def save_file_hash_mapping(file_hash: str, filename: str) -> None:
     try:
         hash_mapping_file = settings.upload_dir / "file_hashes.json"
         hash_mapping = {}
@@ -213,7 +222,7 @@ def save_file_hash_mapping(file_hash: str, filename: str):
         pass
 
 
-def load_existing_file_hashes():
+def load_existing_file_hashes() -> None:
     try:
         # Сканируем существующие файлы и вычисляем их хеши
         for file_path in settings.upload_dir.glob("*.*"):
@@ -283,7 +292,7 @@ def extract_filename_from_url(file_url: str) -> str | None:
         return None
 
 
-def remove_file_hash_mapping(file_path: Path):
+def remove_file_hash_mapping(file_path: Path) -> None:
     try:
         # Вычисляем хеш удаляемого файла
         with open(file_path, "rb") as f:
@@ -307,7 +316,6 @@ def remove_file_hash_mapping(file_path: Path):
                 # Сохраняем обновленный маппинг
                 with open(hash_mapping_file, "w", encoding="utf-8") as f:
                     json.dump(hash_mapping, f, ensure_ascii=False, indent=2)
-
 
     except Exception as e:
         raise HTTPException(

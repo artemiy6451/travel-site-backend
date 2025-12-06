@@ -1,28 +1,12 @@
-import sys
-from contextlib import asynccontextmanager
-from typing import Any
-
-from auth.router import login_router
-from cache import redis_client
-from config import settings
-from excursions.router import excursion_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from reviews import router as reviews_router
 
-
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> Any:
-    """Проверяем подключение к Redis при запуске"""
-    try:
-        redis_client.ping()
-    except Exception:
-        sys.exit(1)
-
-    yield
-    redis_client.close()
-
+from app.auth.router import login_router
+from app.config import settings
+from app.excursions.router import excursion_router
+from app.redis_config import lifespan
+from app.reviews import router as reviews_router
 
 app = FastAPI(
     lifespan=lifespan,

@@ -1,16 +1,16 @@
-"""Initial migration
+"""fix is_active filed in reviews table
 
-Revision ID: 8a80df54ab74
-Revises:
-Create Date: 2025-11-17 01:29:30.038345
+Revision ID: 2d9f7edb9165
+Revises: 07a2c3db5711
+Create Date: 2025-12-07 01:14:35.807697
 
 """
 
 from typing import Sequence, Union
 
 # revision identifiers, used by Alembic.
-revision: str = "8a80df54ab74"
-down_revision: Union[str, Sequence[str], None] = None
+revision: str = "2d9f7edb9165"
+down_revision: Union[str, Sequence[str], None] = "07a2c3db5711"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

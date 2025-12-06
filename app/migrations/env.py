@@ -1,11 +1,14 @@
 from logging.config import fileConfig
 
 from alembic import context
-from auth.models import User  # noqa: F401
-from config import settings
-from database import Base
-from excursions.models import Excursion, ExcursionDetails  # noqa: F401
 from sqlalchemy import engine_from_config, pool
+
+from app.auth.models import UserModel  # noqa: F401
+from app.booking.models import Booking  # noqa: F401
+from app.config import settings
+from app.excursions.models import ExcursionDetailsModel, ExcursionModel  # noqa: F401
+from app.models import Base
+from app.reviews.models import ReviewModel  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,11 +19,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = [
-    User.metadata,
-]
+target_metadata = Base.metadata
 
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.database_uri + "?async_fallback=True")
 
 
 def run_migrations_offline() -> None:
