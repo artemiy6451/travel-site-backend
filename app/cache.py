@@ -3,31 +3,25 @@ import json
 import logging
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable, Optional
+from json.encoder import JSONEncoder
+from typing import Any, Callable
+
+from redis import Redis
 
 from app.redis_config import redis_client
 
 logger = logging.getLogger(__name__)
 
-
-class JSONEncoder(json.JSONEncoder):
-    """Кастомный JSON encoder для обработки datetime и других типов"""
-
-    def default(self, obj):
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        if hasattr(obj, "__dict__"):
-            return obj.__dict__
-        return super().default(obj)
+KEY_LEN = 200
 
 
 class RedisCache:
-    def __init__(self, redis_client):
+    def __init__(self, redis_client: Redis):
         self.redis = redis_client
 
-    def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         try:
-            data = self.redis.get(key)
+            data = await self.redis.get(key)
             if data:
                 return json.loads(data)
             return None
@@ -50,11 +44,11 @@ class RedisCache:
             logger.error(f"Redis delete error for key {key}: {e}")
             return False
 
-    def delete_pattern(self, pattern: str) -> int:
+    async def delete_pattern(self, pattern: str) -> int:
         try:
-            keys = self.redis.keys(pattern)
+            keys = await self.redis.keys(pattern)
             if keys:
-                return self.redis.delete(*keys)
+                return await self.redis.delete(*keys)
             return 0
         except Exception as e:
             logger.error(f"Redis delete pattern error for {pattern}: {e}")
@@ -72,7 +66,9 @@ class RedisCache:
 redis_cache = RedisCache(redis_client)
 
 
-def cached(ttl: int = 300, key_prefix: str = "", unless: Callable = None) -> Callable:
+def cached(
+    ttl: int = 300, key_prefix: str = "", unless: Callable | None = None
+) -> Callable:
     """
     Декоратор для кеширования результатов функций в Redis
     """
@@ -108,20 +104,17 @@ def cached(ttl: int = 300, key_prefix: str = "", unless: Callable = None) -> Cal
     return decorator
 
 
-def invalidate_cache(pattern: str) -> Callable:
+def invalidate_cache(*patterns: str) -> Callable:
     """
     Декоратор для инвалидации кеша после выполнения функции
     """
 
-    def decorator(func: Callable) -> Callable:
+    async def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             result = func(*args, **kwargs)
-            # Инвалидируем кеш после выполнения
-            deleted_count = redis_cache.delete_pattern(pattern)
-            logger.debug(
-                f"Invalidated cache pattern {pattern}, deleted {deleted_count} keys"
-            )
+            for pattern in patterns:
+                await redis_cache.delete_pattern(pattern)
             return result
 
         return wrapper
@@ -141,7 +134,7 @@ def _generate_cache_key(func_name: str, prefix: str, args: tuple, kwargs: dict) 
 
     # Создаем хеш для длинных ключей
     key_string = ":".join(key_parts)
-    if len(key_string) > 200:
+    if len(key_string) > KEY_LEN:
         key_hash = hashlib.md5(key_string.encode()).hexdigest()
         return (
             f"{prefix}:{func_name}:{key_hash}" if prefix else f"{func_name}:{key_hash}"
@@ -150,7 +143,7 @@ def _generate_cache_key(func_name: str, prefix: str, args: tuple, kwargs: dict) 
     return key_string.replace(" ", "")
 
 
-def _convert_to_serializable(obj: Any) -> Any:
+def _convert_to_serializable(obj: Any) -> Any:  # noqa: PLR0911
     """Рекурсивно преобразует объекты в сериализуемые структуры"""
     if obj is None:
         return None

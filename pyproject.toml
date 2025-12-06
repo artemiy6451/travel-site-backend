@@ -46,6 +46,9 @@ include = '\.pyi?$'
 lint.select = ["F", "E", "W", "I", "N", "PL", "C", "B"]
 line-length = 89
 
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["classmethod", "pydantic.field_validator"]
+
 [tool.pytest.ini_options]
 pythonpath = [
     ".", "app"

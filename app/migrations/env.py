@@ -6,8 +6,9 @@ from sqlalchemy import engine_from_config, pool
 from app.auth.models import UserModel  # noqa: F401
 from app.booking.models import Booking  # noqa: F401
 from app.config import settings
-from app.excursions.models import Excursion, ExcursionDetails  # noqa: F401
+from app.excursions.models import ExcursionDetailsModel, ExcursionModel  # noqa: F401
 from app.models import Base
+from app.reviews.models import ReviewModel  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

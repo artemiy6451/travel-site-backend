@@ -18,13 +18,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserService:
     def __init__(self) -> None:
-        self.user_repository: SQLAlchemyRepository[UserModel] = SQLAlchemyRepository(
+        self.repository: SQLAlchemyRepository[UserModel] = SQLAlchemyRepository(
             async_session_maker, UserModel
         )
 
     async def get_user_by_email(self, email: str) -> UserModel | None:
         filter = UserModel.email == email
-        user = await self.user_repository.find_one(filter=filter)
+        user = await self.repository.find_one(filter=filter)
         return user if user else None
 
     async def create_user(self, user: UserCreate) -> UserSchema:
@@ -39,7 +39,7 @@ class UserService:
             "email": user.email,
             "hashed_password": self.get_password_hash(user.password),
         }
-        created_user = await self.user_repository.add_one(userdata)
+        created_user = await self.repository.add_one(userdata)
         return created_user.to_read_model()
 
     async def authenticate_user(self, email: str, password: str) -> UserSchema:

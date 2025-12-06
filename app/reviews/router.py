@@ -1,119 +1,70 @@
-from typing import List, Optional
+from typing import Annotated
 
-from auth.depends import require_superuser
-from database import get_db
-from fastapi import APIRouter, Depends, HTTPException
-from reviews import crud, schemas
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/review", tags=["reviews"])
+from app.auth.depends import require_superuser
+from app.auth.schemas import UserSchema
+from app.reviews.depends import get_review_service
+from app.reviews.schemas import ReviewCreate, ReviewSchema
+from app.reviews.service import ReviewService
+
+router = APIRouter(prefix="/review", tags=["Reviews"])
 
 
-# Public endpoints
-@router.get("/", response_model=List[schemas.ReviewPublic])
+@router.get("/")
 async def get_approved_reviews(
-    skip: int = 0,
-    limit: int = 100,
-    excursion_id: Optional[int] = None,
-    db: Session = Depends(get_db),
-):
-    """Получить одобренные отзывы"""
-    review_crud = crud.ReviewCRUD(db)
-    return review_crud.get_approved_reviews(skip, limit, excursion_id)
+    service: Annotated[ReviewService, Depends(get_review_service)],
+) -> list[ReviewSchema]:
+    return await service.get_approved_reviews()
 
 
 @router.get("/stats")
 async def get_reviews_stats(
-    excursion_id: Optional[int] = None, db: Session = Depends(get_db)
-):
-    """Получить статистику по отзывам"""
-    review_crud = crud.ReviewCRUD(db)
-    return review_crud.get_reviews_stats(excursion_id)
+    service: Annotated[ReviewService, Depends(get_review_service)],
+) -> dict:
+    return await service.get_reviews_stats()
 
 
-@router.post("/", response_model=schemas.ReviewPublic)
-async def create_review(review: schemas.ReviewCreate, db: Session = Depends(get_db)):
-    """Создать новый отзыв (доступно всем)"""
-    review_crud = crud.ReviewCRUD(db)
-    return review_crud.create_review(review)
+@router.post("/")
+async def create_review(
+    review: ReviewCreate,
+    service: Annotated[ReviewService, Depends(get_review_service)],
+) -> ReviewSchema:
+    return await service.create_review(review)
 
 
 # Admin endpoints
-@router.get("/admin/all", response_model=List[schemas.ReviewAdmin])
+@router.get("/admin/all")
 async def get_all_reviews(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    _: bool = Depends(require_superuser),
-):
-    """Получить все отзывы (только для админа)"""
-    review_crud = crud.ReviewCRUD(db)
-    return review_crud.get_all_reviews(skip, limit)
+    service: Annotated[ReviewService, Depends(get_review_service)],
+    _: Annotated[UserSchema, Depends(require_superuser)],
+) -> list[ReviewSchema]:
+    return await service.get_all_reviews()
 
 
-@router.get("/admin/pending", response_model=List[schemas.ReviewAdmin])
+@router.get("/admin/pending")
 async def get_pending_reviews(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    _: bool = Depends(require_superuser),
-):
-    """Получить отзывы на модерации (только для админа)"""
-    review_crud = crud.ReviewCRUD(db)
-    return review_crud.get_pending_reviews(skip, limit)
+    service: Annotated[ReviewService, Depends(get_review_service)],
+    _: Annotated[UserSchema, Depends(require_superuser)],
+) -> list[ReviewSchema]:
+    return await service.get_pending_reviews()
 
 
-@router.post("/admin/{review_id}/approve", response_model=schemas.ReviewAdmin)
+@router.post("/admin/{review_id}/toggle")
 async def approve_review(
     review_id: int,
-    db: Session = Depends(get_db),
-    _: bool = Depends(require_superuser),
-):
-    """Одобрить отзыв (только для админа)"""
-    review_crud = crud.ReviewCRUD(db)
-    db_review = review_crud.approve_review(review_id)
-    if not db_review:
-        raise HTTPException(status_code=404, detail="Отзыв не найден")
-    return db_review
-
-
-@router.post("/admin/{review_id}/hide", response_model=schemas.ReviewAdmin)
-async def hide_review(
-    review_id: int,
-    db: Session = Depends(get_db),
-    _: bool = Depends(require_superuser),
-):
-    """Скрыть отзыв (только для админа)"""
-    review_crud = crud.ReviewCRUD(db)
-    db_review = review_crud.hide_review(review_id)
-    if not db_review:
-        raise HTTPException(status_code=404, detail="Отзыв не найден")
-    return db_review
-
-
-@router.post("/admin/{review_id}/show", response_model=schemas.ReviewAdmin)
-async def show_review(
-    review_id: int,
-    db: Session = Depends(get_db),
-    _: bool = Depends(require_superuser),
-):
-    """Показать скрытый отзыв (только для админа)"""
-    review_crud = crud.ReviewCRUD(db)
-    db_review = review_crud.show_review(review_id)
-    if not db_review:
-        raise HTTPException(status_code=404, detail="Отзыв не найден")
+    service: Annotated[ReviewService, Depends(get_review_service)],
+    _: Annotated[UserSchema, Depends(require_superuser)],
+) -> ReviewSchema:
+    db_review = await service.toggle_show_review(review_id)
     return db_review
 
 
 @router.delete("/admin/{review_id}")
 async def delete_review_admin(
     review_id: int,
-    db: Session = Depends(get_db),
-    _: bool = Depends(require_superuser),
-):
-    """Удалить отзыв (только для админа)"""
-    review_crud = crud.ReviewCRUD(db)
-    success = review_crud.delete_review(review_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Отзыв не найден")
-    return {"message": "Отзыв удален"}
+    service: Annotated[ReviewService, Depends(get_review_service)],
+    _: Annotated[UserSchema, Depends(require_superuser)],
+) -> dict:
+    await service.delete_review(review_id)
+    return {"message": "Review deleted"}

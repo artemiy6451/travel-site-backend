@@ -6,7 +6,7 @@ from app.auth.depends import get_current_user, get_user_service
 from app.auth.schemas import Token, UserCreate, UserSchema
 from app.auth.service import UserService
 
-login_router = APIRouter(tags=["Auth API"])
+login_router = APIRouter(tags=["Auth"])
 
 
 # Регистрация пользователя

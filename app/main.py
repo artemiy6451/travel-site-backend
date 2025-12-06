@@ -4,11 +4,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.auth.router import login_router
 from app.config import settings
+from app.excursions.router import excursion_router
 from app.redis_config import lifespan
-
-# from app.excursions.router import excursion_router
-# from app.reviews import router as reviews_router
-
+from app.reviews import router as reviews_router
 
 app = FastAPI(
     lifespan=lifespan,
@@ -18,8 +16,8 @@ app = FastAPI(
 )
 
 app.include_router(login_router)
-# app.include_router(excursion_router)
-# app.include_router(reviews_router.router)
+app.include_router(excursion_router)
+app.include_router(reviews_router.router)
 
 app.add_middleware(
     CORSMiddleware,

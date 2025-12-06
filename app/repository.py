@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from sqlalchemy import (
     ColumnElement,
@@ -21,7 +21,7 @@ class SQLAlchemyRepository(Generic[T]):
         self.session = session
         self.model = model
 
-    async def find_one(self, filter: ColumnElement) -> T | None:
+    async def find_one(self, filter: ColumnElement[bool]) -> T | None:
         async with self.session() as s:
             stmt = select(self.model).filter(filter)
             res = await s.execute(stmt)
@@ -30,17 +30,16 @@ class SQLAlchemyRepository(Generic[T]):
 
     async def find_all(
         self,
-        filter_by: Optional[Any] = None,
-        join_by: Optional[tuple[Any, Any, Any]] = None,
+        filter_by: ColumnElement[bool] | None = None,
+        offset: int = 0,
+        limit: int = 100,
     ) -> list[T]:
         async with self.session() as s:
             stmt = select(self.model)
-            if join_by:
-                stmt = select(self.model, join_by[1])
-                stmt = stmt.select_from(join_by[0]).join(*join_by[1:])
             if filter_by is not None:
                 stmt = stmt.where(filter_by)
 
+            stmt = stmt.offset(offset).limit(limit)
             result = await s.execute(stmt)
             res = [row[0] for row in result.all()]
             return res
@@ -52,7 +51,7 @@ class SQLAlchemyRepository(Generic[T]):
             await s.commit()
             return res.scalar_one()
 
-    async def update_one(self, id: int, data: dict[str, Any]) -> T | None:
+    async def update_one(self, id: int, data: dict[str, Any]) -> T:
         async with self.session() as s:
             stmt = (
                 update(self.model)
@@ -62,7 +61,7 @@ class SQLAlchemyRepository(Generic[T]):
             )
             res = await s.execute(stmt)
             await s.commit()
-            return res.scalar_one_or_none()
+            return res.scalar_one()
 
     async def delete_one(self, id: int) -> int:
         async with self.session() as s:
