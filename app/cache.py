@@ -19,11 +19,11 @@ class RedisCache:
     def __init__(self, redis_client: Redis):
         self.redis = redis_client
 
-    async def get(self, key: str) -> Any | None:
+    def get(self, key: str) -> Any | None:
         try:
-            data = await self.redis.get(key)
+            data = self.redis.get(key)
             if data:
-                return json.loads(data)
+                return json.loads(data)  # type: ignore
             return None
         except Exception as e:
             logger.error(f"Redis get error for key {key}: {e}")
@@ -44,11 +44,11 @@ class RedisCache:
             logger.error(f"Redis delete error for key {key}: {e}")
             return False
 
-    async def delete_pattern(self, pattern: str) -> int:
+    def delete_pattern(self, pattern: str) -> int:
         try:
-            keys = await self.redis.keys(pattern)
+            keys = self.redis.keys(pattern)
             if keys:
-                return await self.redis.delete(*keys)
+                return self.redis.delete(*keys)  # type: ignore
             return 0
         except Exception as e:
             logger.error(f"Redis delete pattern error for {pattern}: {e}")
@@ -75,7 +75,7 @@ def cached(
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Пропускаем кеширование если unless возвращает True
             if unless and unless(*args, **kwargs):
                 return func(*args, **kwargs)
@@ -91,7 +91,7 @@ def cached(
 
             # Выполняем функцию и кешируем результат
             logger.debug(f"Cache miss for {cache_key}")
-            result = func(*args, **kwargs)
+            result = await func(*args, **kwargs)
 
             # Сериализуем результат перед сохранением в кеш
             serializable_result = _convert_to_serializable(result)
@@ -109,12 +109,12 @@ def invalidate_cache(*patterns: str) -> Callable:
     Декоратор для инвалидации кеша после выполнения функции
     """
 
-    async def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable) -> Callable:
         @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             result = func(*args, **kwargs)
             for pattern in patterns:
-                await redis_cache.delete_pattern(pattern)
+                redis_cache.delete_pattern(pattern)
             return result
 
         return wrapper

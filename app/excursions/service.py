@@ -60,7 +60,7 @@ class ExcurionService:
     async def create_excursion(
         self, excursion: ExcursionCreateScheme
     ) -> ExcursionScheme:
-        if self.search_excursions(excursion.title):
+        if await self.search_excursions(excursion.title):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Excursion already exist",
@@ -241,15 +241,15 @@ class ExcurionService:
         self, excursion_id: int, details_update: ExcursionDetailsUpdateScheme
     ) -> ExcursionDetailsScheme:
         await self.get_excursion(excursion_id)
-        await self.get_excursion_details(excursion_id=excursion_id)
+        details = await self.get_excursion_details(excursion_id=excursion_id)
 
         updated_details = await self.details_repository.update_one(
-            id=excursion_id, data=details_update.model_dump()
+            id=details.id, data=details_update.model_dump()
         )
         return updated_details.to_read_model()
 
     @invalidate_cache("excursion_details*", "excursion_full*", "excursion_with_details*")
     async def delete_excursion_details(self, excursion_id: int) -> bool:
-        await self.get_excursion_details(excursion_id=excursion_id)
-        await self.details_repository.delete_one(id=excursion_id)
+        details = await self.get_excursion_details(excursion_id=excursion_id)
+        await self.details_repository.delete_one(id=details.id)
         return True

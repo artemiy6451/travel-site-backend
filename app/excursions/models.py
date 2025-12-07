@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Text
+from sqlalchemy import JSON, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.excursions.schemas import ExcursionDetailsScheme, ExcursionScheme, ItineraryItem
@@ -13,7 +13,7 @@ class ExcursionModel(Base):
     title: Mapped[str] = mapped_column(nullable=False)
     category: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    date: Mapped[datetime] = mapped_column(nullable=False)
     price: Mapped[int] = mapped_column(nullable=False)
     duration: Mapped[int] = mapped_column(nullable=False)
     people_amount: Mapped[int] = mapped_column(nullable=False)

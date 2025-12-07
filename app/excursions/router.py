@@ -70,7 +70,8 @@ async def create_new_excursion(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
     _: Annotated[UserSchema, Depends(require_superuser)],
 ) -> ExcursionScheme:
-    return await service.create_excursion(excursion=excursion)
+    new_excursion = await service.create_excursion(excursion=excursion)
+    return new_excursion
 
 
 @excursion_router.put("/excursions/{excursion_id}", response_model=ExcursionScheme)
