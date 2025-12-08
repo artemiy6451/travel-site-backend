@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.auth.models import UserModel  # noqa: F401
-from app.booking.models import Booking  # noqa: F401
+from app.booking.models import BookingModel  # noqa: F401
 from app.config import settings
 from app.excursions.models import ExcursionDetailsModel, ExcursionModel  # noqa: F401
 from app.models import Base

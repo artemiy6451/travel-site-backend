@@ -35,6 +35,9 @@ migrate:
 migrate-create:
 	PYTHONPATH=. poetry run alembic revision --autogenerate -m "$(m)"
 
+migrate-down:
+	PYTHONPATH=. poetry run alembic downgrade -1
+
 clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -r {} +

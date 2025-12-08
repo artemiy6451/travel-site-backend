@@ -30,12 +30,16 @@ class SQLAlchemyRepository(Generic[T]):
 
     async def find_all(
         self,
+        join_by: Any | None = None,
         filter_by: ColumnElement[bool] | None = None,
         offset: int = 0,
         limit: int = 100,
     ) -> list[T]:
         async with self.session() as s:
             stmt = select(self.model)
+            if join_by is not None:
+                stmt = stmt.join(join_by)
+
             if filter_by is not None:
                 stmt = stmt.where(filter_by)
 

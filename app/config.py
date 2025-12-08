@@ -1,6 +1,7 @@
+import json
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -23,6 +24,13 @@ class Settings(BaseSettings):
     upload_dir: Path = Field(default=Path("static/"))
 
     ttl: int = Field(default=300)
+
+    telegram_token: str = ""
+    telegram_chat_id: int = 0
+
+    sheets_credentials_path: str = "sheets.json"
+    spreadsheet_id: str = ""
+    default_sheet_name: str = "Bookings"
 
     class Config:
         env_file = ".env"
@@ -53,6 +61,18 @@ class Settings(BaseSettings):
             ]
         else:
             return ["https://travelvv.ru"]
+
+    @property
+    def credentials_dict(self) -> Any:
+        """Загружает credentials из JSON файла"""
+        path = Path(self.sheets_credentials_path)
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Credentials file not found: {self.sheets_credentials_path}"
+            )
+
+        with open(path, "r") as f:
+            return json.load(f)
 
 
 settings = Settings()

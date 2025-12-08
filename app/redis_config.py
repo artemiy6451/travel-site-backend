@@ -1,10 +1,6 @@
 import os
-import sys
-from contextlib import asynccontextmanager
-from typing import Any
 
 import redis
-from fastapi import FastAPI
 
 
 class RedisConfig:
@@ -30,14 +26,3 @@ def get_redis_connection() -> redis.Redis:
 
 
 redis_client = get_redis_connection()
-
-
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> Any:
-    try:
-        redis_client.ping()
-    except Exception:
-        sys.exit(1)
-
-    yield
-    redis_client.close()
