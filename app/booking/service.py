@@ -34,7 +34,7 @@ class BookingService:
         await self._send_booking_notification(
             booking=formated_booking, excursion=excursion
         )
-        self.sheets_service.add_booking(formated_booking, excursion)
+        # self.sheets_service.add_booking(formated_booking, excursion)
 
         return formated_booking
 
@@ -71,11 +71,11 @@ class BookingService:
             return None
 
         formated_booking = new_booking.to_read_model()
-        excursion = get_excursion.to_read_model()
+        # excursion = get_excursion.to_read_model()
 
-        self.sheets_service.update_booking_status(
-            booking=formated_booking, excursion=excursion
-        )
+        # self.sheets_service.update_booking_status(
+        # booking=formated_booking, excursion=excursion
+        # )
 
         return formated_booking
 
