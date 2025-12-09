@@ -43,9 +43,9 @@ class ReviewService:
         return [review.to_read_model() for review in reviews]
 
     async def toggle_show_review(self, review_id: int) -> ReviewSchema:
-        await self.get_review(review_id)
+        review = await self.get_review(review_id)
 
-        data = {"is_active": True}
+        data = {"is_active": not review.is_active}
 
         new_review = await self.repository.update_one(id=review_id, data=data)
         return new_review.to_read_model()
