@@ -3,6 +3,7 @@ from app.booking.schemas import BookingCreate, BookingSchema
 from app.database import async_session_maker
 from app.excursions.models import ExcursionModel
 from app.excursions.schemas import ExcursionScheme
+from app.excursions.service import ExcurionService
 from app.repository import SQLAlchemyRepository
 from app.sheets.service import SheetsService, sheets_service
 from app.telegram.service import TelegramService, telegram_service
@@ -18,6 +19,7 @@ class BookingService:
         )
         self.telegram_service: TelegramService = telegram_service
         self.sheets_service: SheetsService = sheets_service
+        self.excursion_service: ExcurionService = ExcurionService()
 
     async def create_booking(self, booking: BookingCreate) -> BookingSchema | None:
         get_excursion = await self.excursion_repository.find_one(
@@ -60,17 +62,27 @@ class BookingService:
         if booking is None:
             return None
 
-        new_booking = await self.booking_repository.update_one(
-            id=booking_id, data={"is_active": not booking.is_active}
-        )
-
         get_excursion = await self.excursion_repository.find_one(
             ExcursionModel.id == booking.excursion_id
         )
         if get_excursion is None:
             return None
 
+        new_booking = await self.booking_repository.update_one(
+            id=booking_id, data={"is_active": not booking.is_active}
+        )
+
         formated_booking = new_booking.to_read_model()
+
+        if formated_booking.is_active:
+            await self.excursion_service.add_people_left(
+                get_excursion.id, formated_booking.total_people
+            )
+        else:
+            await self.excursion_service.add_people_left(
+                get_excursion.id, -formated_booking.total_people
+            )
+
         # excursion = get_excursion.to_read_model()
 
         # self.sheets_service.update_booking_status(
