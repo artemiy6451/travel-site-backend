@@ -1,16 +1,21 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 
 from app.cache import cached, invalidate_cache
 from app.config import settings
 from app.database import async_session_maker
-from app.excursions.files import delete_uploaded_file_by_url
-from app.excursions.models import ExcursionDetailsModel, ExcursionModel
+from app.excursions.files import delete_uploaded_file_by_url, save_uploaded_file
+from app.excursions.models import (
+    ExcursionDetailsModel,
+    ExcursionImageModel,
+    ExcursionModel,
+)
 from app.excursions.schemas import (
     ExcursionCreateScheme,
     ExcursionDetailsCreateScheme,
     ExcursionDetailsScheme,
     ExcursionDetailsUpdateScheme,
     ExcursionFullScheme,
+    ExcursionImageSchema,
     ExcursionScheme,
     ExcursionUpdateScheme,
 )
@@ -24,6 +29,9 @@ class ExcurionService:
         )
         self.details_repository: SQLAlchemyRepository[ExcursionDetailsModel] = (
             SQLAlchemyRepository(async_session_maker, ExcursionDetailsModel)
+        )
+        self.images_repository: SQLAlchemyRepository[ExcursionImageModel] = (
+            SQLAlchemyRepository(async_session_maker, ExcursionImageModel)
         )
 
     @cached(ttl=settings.ttl, key_prefix="excursion")
@@ -50,12 +58,45 @@ class ExcurionService:
         )
         return [excursion.to_read_model() for excursion in excursions]
 
+    async def get_excursion_images(
+        self, excursion_id: int
+    ) -> list[ExcursionImageSchema]:
+        images = await self.images_repository.find_all(
+            filter_by=(ExcursionImageModel.excursion_id == excursion_id)
+        )
+        return [image.to_read_model() for image in images]
+
+    @cached(ttl=settings.ttl, key_prefix="excursions")
+    async def add_excurion_image(
+        self, image: UploadFile, excursion_id: int
+    ) -> ExcursionImageSchema:
+        url = save_uploaded_file(file=image)
+        data = {
+            "excursion_id": excursion_id,
+            "url": url,
+        }
+        new_image = await self.images_repository.add_one(data)
+        return new_image.to_read_model()
+
+    async def delete_excursion_image(self, image_id: int) -> bool:
+        image = await self.images_repository.find_one(
+            filter=(ExcursionImageModel.id == image_id)
+        )
+        if image is None:
+            return False
+
+        delete_uploaded_file_by_url(image.url)
+
+        await self.images_repository.delete_one(id=image_id)
+        return True
+
     @invalidate_cache(
         "excursions*",
         "excursion*",
         "excursion_full*",
         "excursion_details*",
         "excursion_with_details*",
+        "excursions_images",
     )
     async def create_excursion(
         self, excursion: ExcursionCreateScheme
@@ -104,9 +145,6 @@ class ExcurionService:
         "excursion_with_details*",
     )
     async def delete_excursion(self, excursion_id: int) -> bool:
-        excursion = await self.get_excursion(excursion_id)
-
-        delete_uploaded_file_by_url(excursion.image_url)
         await self.excursion_repository.delete_one(id=excursion_id)
         return True
 
@@ -187,6 +225,7 @@ class ExcurionService:
     async def get_excursion_full_info(self, excursion_id: int) -> ExcursionFullScheme:
         excursion = await self.get_excursion(excursion_id)
         details = await self.get_excursion_details(excursion_id)
+        images = await self.get_excursion_images(excursion_id)
 
         result = ExcursionFullScheme(
             title=excursion.title,
@@ -199,21 +238,13 @@ class ExcurionService:
             people_amount=excursion.people_amount,
             people_left=excursion.people_left,
             is_active=excursion.is_active,
-            image_url=excursion.image_url,
             id=excursion.id,
         )
 
         if details:
-            result.details = ExcursionDetailsScheme(
-                description=details.description,
-                inclusions=details.inclusions,
-                itinerary=details.itinerary,
-                meeting_point=details.meeting_point,
-                requirements=details.requirements,
-                recommendations=details.recommendations,
-                id=details.id,
-                excursion_id=excursion.id,
-            )
+            result.details = details
+        if images:
+            result.images = images
 
         return result
 

@@ -1,17 +1,17 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from app.auth.depends import require_superuser
 from app.auth.schemas import UserSchema
 from app.excursions.depends import get_excursion_service
-from app.excursions.files import save_uploaded_file
 from app.excursions.schemas import (
     ExcursionCreateScheme,
     ExcursionDetailsCreateScheme,
     ExcursionDetailsScheme,
     ExcursionDetailsUpdateScheme,
     ExcursionFullScheme,
+    ExcursionImageSchema,
     ExcursionScheme,
     ExcursionUpdateScheme,
 )
@@ -131,18 +131,35 @@ async def change_bus_number(
     )
 
 
-@excursion_router.post("/excursions/save_image")
-async def save_image(
+@excursion_router.post("/excursions/{excursion_id}/add_image")
+async def add_image(
+    excursion_id: int,
     image_file: Annotated[UploadFile, File(...)],
-    _: Annotated[UserSchema, Depends(require_superuser)],
-) -> str:
-    try:
-        return save_uploaded_file(image_file)
+    service: Annotated[ExcurionService, Depends(get_excursion_service)],
+    # _: Annotated[UserSchema, Depends(require_superuser)],
+) -> ExcursionImageSchema:
+    new_image = await service.add_excurion_image(
+        image=image_file, excursion_id=excursion_id
+    )
+    return new_image
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Ошибка при сохранении изображения: {str(e)}"
-        ) from Exception
+
+@excursion_router.get("/excursions/{excursion_id}/get_images")
+async def get_excursion_images(
+    excursion_id: int,
+    service: Annotated[ExcurionService, Depends(get_excursion_service)],
+) -> list[ExcursionImageSchema]:
+    images = await service.get_excursion_images(excursion_id=excursion_id)
+    return images
+
+
+@excursion_router.delete("/excursions/image/{image_id}")
+async def delete_excursion_image(
+    image_id: int,
+    service: Annotated[ExcurionService, Depends(get_excursion_service)],
+) -> bool:
+    state = await service.delete_excursion_image(image_id=image_id)
+    return state
 
 
 # ===== Public ручки для работы с ExcursionDetailsModel =====

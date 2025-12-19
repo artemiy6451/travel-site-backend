@@ -15,7 +15,6 @@ class ExcursionBaseScheme(BaseModel):
     people_left: int
     bus_number: int = 0
     is_active: bool
-    image_url: str
 
 
 class ExcursionCreateScheme(ExcursionBaseScheme):
@@ -33,14 +32,6 @@ class ExcursionUpdateScheme(BaseModel):
     people_left: int | None
     is_active: bool | None
     bus_number: int | None
-    image_url: str | None
-
-
-class ExcursionScheme(ExcursionBaseScheme):
-    id: int
-
-    class Config:
-        from_attributes = True
 
 
 class ItineraryItem(BaseModel):
@@ -82,5 +73,24 @@ class ExcursionDetailsScheme(ExcursionDetailsBaseScheme):
         from_attributes = True
 
 
+class ExcursionImageSchema(BaseModel):
+    id: int
+    excursion_id: int
+    url: str
+
+    class Config:
+        from_attributes = True
+
+
+class ExcursionScheme(ExcursionBaseScheme):
+    id: int
+
+    images: list[ExcursionImageSchema] | None
+
+    class Config:
+        from_attributes = True
+
+
 class ExcursionFullScheme(ExcursionScheme):
     details: ExcursionDetailsScheme | None = None
+    images: list[ExcursionImageSchema] | None = None
