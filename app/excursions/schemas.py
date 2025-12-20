@@ -6,11 +6,9 @@ from pydantic import BaseModel
 
 class ExcursionBaseScheme(BaseModel):
     title: str
-    category: str
     description: str
     date: datetime
     price: int
-    duration: int
     people_amount: int
     people_left: int
     bus_number: int = 0
@@ -23,11 +21,9 @@ class ExcursionCreateScheme(ExcursionBaseScheme):
 
 class ExcursionUpdateScheme(BaseModel):
     title: str | None
-    category: str | None
     description: str | None
     date: datetime | None
     price: int | None
-    duration: int | None
     people_amount: int | None
     people_left: int | None
     is_active: bool | None

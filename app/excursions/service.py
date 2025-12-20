@@ -49,12 +49,10 @@ class ExcurionService:
         self,
         offset: int = 0,
         limit: int = 100,
-        category: str | None = None,
     ) -> list[ExcursionScheme]:
         excursions = await self.excursion_repository.find_all(
             offset=offset,
             limit=limit,
-            filter_by=ExcursionModel.category == category if category else None,
         )
         return [excursion.to_read_model() for excursion in excursions]
 
@@ -229,12 +227,10 @@ class ExcurionService:
 
         result = ExcursionFullScheme(
             title=excursion.title,
-            category=excursion.category,
             description=excursion.description,
             date=excursion.date,
             price=excursion.price,
             bus_number=excursion.bus_number,
-            duration=excursion.duration,
             people_amount=excursion.people_amount,
             people_left=excursion.people_left,
             is_active=excursion.is_active,

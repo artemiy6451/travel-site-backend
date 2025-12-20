@@ -26,12 +26,10 @@ async def read_excursions(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
     skip: int = 0,
     limit: int = 100,
-    category: str | None = Query(None),
 ) -> list[ExcursionScheme]:
     return await service.get_excursions(
         offset=skip,
         limit=limit,
-        category=category,
     )
 
 
@@ -49,18 +47,6 @@ async def search_excursions_by_term(
     q: str = Query(...),
 ) -> list[ExcursionScheme]:
     return await service.search_excursions(search_term=q)
-
-
-@excursion_router.get(
-    "/excursions/category/{category}", response_model=list[ExcursionScheme]
-)
-async def read_excursions_by_category(
-    category: str,
-    service: Annotated[ExcurionService, Depends(get_excursion_service)],
-) -> list[ExcursionScheme]:
-    return await service.get_excursions(
-        category=category,
-    )
 
 
 # ===== Admin ручки для работы с ExcursionModel =====

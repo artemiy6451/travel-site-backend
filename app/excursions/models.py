@@ -16,11 +16,9 @@ class ExcursionModel(Base):
     __tablename__ = "excursions"
 
     title: Mapped[str] = mapped_column(nullable=False)
-    category: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=False)
     date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     price: Mapped[int] = mapped_column(nullable=False)
-    duration: Mapped[int] = mapped_column(nullable=False)
     people_amount: Mapped[int] = mapped_column(nullable=False)
     people_left: Mapped[int] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(nullable=False)
@@ -43,11 +41,9 @@ class ExcursionModel(Base):
         return ExcursionScheme(
             images=[image.to_read_model() for image in self.images],
             title=self.title,
-            category=self.category,
             description=self.description,
             date=self.date,
             price=self.price,
-            duration=self.duration,
             people_amount=self.people_amount,
             people_left=self.people_left,
             bus_number=self.bus_number,
