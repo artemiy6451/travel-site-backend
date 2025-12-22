@@ -17,7 +17,7 @@ class ExcursionModel(Base):
 
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=False)
-    date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=False), nullable=False)
     price: Mapped[int] = mapped_column(nullable=False)
     people_amount: Mapped[int] = mapped_column(nullable=False)
     people_left: Mapped[int] = mapped_column(nullable=False)
