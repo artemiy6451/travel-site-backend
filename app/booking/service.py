@@ -5,7 +5,8 @@ from app.excursions.models import ExcursionModel
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
 from app.repository import SQLAlchemyRepository
-from app.sheets.service import SheetsService, sheets_service
+
+# from app.sheets.service import SheetsService, sheets_service
 from app.telegram.service import TelegramService, telegram_service
 
 
@@ -18,7 +19,7 @@ class BookingService:
             SQLAlchemyRepository(async_session_maker, ExcursionModel)
         )
         self.telegram_service: TelegramService = telegram_service
-        self.sheets_service: SheetsService = sheets_service
+        # self.sheets_service: SheetsService = sheets_service
         self.excursion_service: ExcurionService = ExcurionService()
 
     async def create_booking(self, booking: BookingCreate) -> BookingSchema | None:

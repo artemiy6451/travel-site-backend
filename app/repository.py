@@ -1,5 +1,6 @@
 from typing import Any, Generic, Type, TypeVar
 
+from loguru import logger
 from sqlalchemy import (
     ColumnElement,
     delete,
@@ -20,12 +21,30 @@ class SQLAlchemyRepository(Generic[T]):
     ) -> None:
         self.session = session
         self.model = model
+        logger.debug(
+            "Setup repository with session: {} and model: {}", self.session, self.model
+        )
 
     async def find_one(self, filter: ColumnElement[bool]) -> T | None:
+        logger.debug(
+            (
+                "Send select request from `find_one`"
+                "to database for model: {} with filter {}"
+            ),
+            self.model,
+            filter,
+        )
+
         async with self.session() as s:
             stmt = select(self.model).filter(filter)
+
+            logger.debug("Final statement: {}", stmt)
+
             res = await s.execute(stmt)
             row = res.scalar_one_or_none()
+
+            logger.debug("Returning from `find_one`: {}", row)
+
             return row
 
     async def find_all(
@@ -35,6 +54,18 @@ class SQLAlchemyRepository(Generic[T]):
         offset: int = 0,
         limit: int = 100,
     ) -> list[T]:
+        logger.debug(
+            (
+                "Send select request from `find_all` to database for model: {}"
+                "with filter: {}, offset: {}, limit: {}, join: {}"
+            ),
+            self.model,
+            filter_by,
+            offset,
+            limit,
+            join_by,
+        )
+
         async with self.session() as s:
             stmt = select(self.model)
             if join_by is not None:
@@ -44,18 +75,46 @@ class SQLAlchemyRepository(Generic[T]):
                 stmt = stmt.where(filter_by)
 
             stmt = stmt.offset(offset).limit(limit)
+
+            logger.debug("Final statement: {}", stmt)
+
             result = await s.execute(stmt)
             res = [row[0] for row in result.all()]
+
+            logger.debug("Returning from `find_all`: {}", res)
+
             return res
 
     async def add_one(self, data: dict[str, Any]) -> T:
+        logger.debug(
+            "Send create request form `add_one` to database for model: {} and data: {}",
+            self.model,
+            data,
+        )
         async with self.session() as s:
             stmt = insert(self.model).values(**data).returning(self.model)
+
+            logger.debug("Final statement: {}", stmt)
+
             res = await s.execute(stmt)
             await s.commit()
-            return res.scalar_one()
+            result = res.scalar_one()
+
+            logger.debug("Returning from `add_one`: {}", result)
+
+            return result
 
     async def update_one(self, id: int, data: dict[str, Any]) -> T:
+        logger.debug(
+            (
+                "Send update request form `update_one` to database"
+                "for model: {}, id: {} and data: {}"
+            ),
+            self.model,
+            id,
+            data,
+        )
+
         async with self.session() as s:
             stmt = (
                 update(self.model)
@@ -63,13 +122,30 @@ class SQLAlchemyRepository(Generic[T]):
                 .where(self.model.id == id)
                 .returning(self.model)
             )
+
+            logger.debug("Final statement: {}", stmt)
+
             res = await s.execute(stmt)
             await s.commit()
-            return res.scalar_one()
+            result = res.scalar_one()
+
+            logger.debug("Returning from `update_one`: {}", result)
+
+            return result
 
     async def delete_one(self, id: int) -> int:
+        logger.debug(
+            "Send delete request form `delete_one` to database for model: {} and id: {}",
+            self.model,
+            id,
+        )
         async with self.session() as s:
             stmt = delete(self.model).where(self.model.id == id).returning(self.model.id)
+            logger.debug("Final statement: {}", stmt)
             res = await s.execute(stmt)
             await s.commit()
-            return res.scalar_one()
+            result = res.scalar_one()
+
+            logger.debug("Returning from `delete_one`: {}", result)
+
+            return result

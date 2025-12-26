@@ -1,4 +1,3 @@
-import logging
 from typing import List, Optional
 
 from aiogram import Bot
@@ -6,12 +5,11 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from loguru import logger
 
 from app.booking.schemas import BookingSchema
 from app.config import settings
 from app.excursions.schemas import ExcursionScheme
-
-logger = logging.getLogger(__name__)
 
 
 class TelegramService:
@@ -27,6 +25,11 @@ class TelegramService:
         )
 
     def _get_keyboard(self, is_active: bool, booking_id: int) -> InlineKeyboardMarkup:
+        logger.debug(
+            "Generate keyboard with is_active={} and booking_id={}",
+            is_active,
+            booking_id,
+        )
         builder = InlineKeyboardBuilder()
         builder.row(
             InlineKeyboardButton(
@@ -41,6 +44,12 @@ class TelegramService:
         excursion: ExcursionScheme,
         booking: BookingSchema,
     ) -> bool:
+        logger.debug(
+            "Send notification with excursion={} and booking={}",
+            excursion,
+            booking,
+        )
+
         message = (
             "🎫 <b>НОВОЕ БРОНИРОВАНИЕ</b>\n"
             "━━━━━━━━━━━━━━━━━━\n"
@@ -66,12 +75,21 @@ class TelegramService:
                 parse_mode=ParseMode.HTML,
                 reply_markup=self._get_keyboard(booking.is_active, booking.id),
             )
-        except Exception:
+        except Exception as e:
+            logger.exception("Can not send message: {}", e)
             return False
 
         return True
 
     async def toggle_status(self, callback: CallbackQuery, booking_id: int) -> None:
+        logger.debug(
+            (
+                "Toggle booking status with callback={callback!r}"
+                "and booking_id={booking_id!r}"
+            ),
+            callback=callback,
+            booking_id=booking_id,
+        )
         if "🟢 Активна" in callback.message.text:  # type: ignore
             message = callback.message.text.replace("🟢 Активна", "🔴 В обработке")  # type: ignore
             is_active = False

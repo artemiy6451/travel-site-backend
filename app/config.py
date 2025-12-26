@@ -3,8 +3,11 @@ import os
 from pathlib import Path
 from typing import Any, Literal
 
+from loguru import logger
 from pydantic import Field
 from pydantic_settings import BaseSettings
+
+logger.debug("Loading settings...")
 
 
 class Settings(BaseSettings):
@@ -76,5 +79,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+logger.debug("Settings loaded: {!r}", settings)
 
+logger.debug("Create upload directory")
 os.makedirs(os.path.join(os.getcwd(), settings.upload_dir), exist_ok=True)

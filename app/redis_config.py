@@ -1,6 +1,9 @@
 import os
 
 import redis
+from loguru import logger
+
+logger.debug("Setup Redis config")
 
 
 class RedisConfig:
@@ -26,3 +29,4 @@ def get_redis_connection() -> redis.Redis:
 
 
 redis_client = get_redis_connection()
+logger.debug("Redis config ready.")

@@ -6,29 +6,40 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 from app.auth.router import login_router
 from app.booking.router import booking_router
 from app.config import settings
 from app.excursions.router import excursion_router
+from app.logging.utils import remove_all_logers, setup_new_logger
+from app.middleware.logging_middleware import LoggingMiddleware
 from app.redis_config import redis_client
 from app.reviews.router import reviews_router
 from app.telegram.service import telegram_service
 
 locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 
+remove_all_logers()
+
+setup_new_logger()
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> Any:
+    logger.info("Starting application...", mode=settings.mode)
     try:
         redis_client.ping()
-    except Exception:
+        logger.success("Redis connected successfully")
+    except Exception as e:
+        logger.error("Redis connection failed", error=str(e))
         sys.exit(1)
 
     yield
 
     redis_client.close()
     await telegram_service.close()
+    logger.info("Shutting down application...")
 
 
 app = FastAPI(
@@ -38,11 +49,8 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-app.include_router(login_router)
-app.include_router(excursion_router)
-app.include_router(reviews_router)
-app.include_router(booking_router)
-
+# Middleware
+app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -51,9 +59,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+logger.info("Setting up routes...")
+app.include_router(login_router)
+app.include_router(excursion_router)
+app.include_router(reviews_router)
+app.include_router(booking_router)
+logger.success("Routes setup complete")
+
+
 app.mount("/static", StaticFiles(directory=settings.upload_dir), name="static")
 
 
 @app.get("/health")
 async def health_check() -> dict:
+    logger.debug("Health check requested")
     return {"status": "healthy"}
+
+
+logger.success(
+    f"Application '{app.title}' in '{settings.mode}' mode v{app.version} is ready!"
+)

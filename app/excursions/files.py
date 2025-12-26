@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
+from loguru import logger
 from PIL import Image
 
 from app.config import settings
@@ -26,6 +27,8 @@ MAX_HEIGHT = 1080
 
 
 def compress_image(image_content: bytes, file_extension: str) -> bytes:
+    logger.debug("Compress image with file extension: {}", file_extension)
+
     try:
         # Открываем изображение из bytes
         image = Image.open(BytesIO(image_content))
@@ -74,13 +77,21 @@ def compress_image(image_content: bytes, file_extension: str) -> bytes:
         if compressed_size > original_size:
             return image_content
 
+        logger.debug(
+            "File compressed form {original_size} to {compressed_size}",
+            original_size=original_size,
+            compressed_size=compressed_size,
+        )
         return compressed_data
 
-    except Exception:
+    except Exception as e:
+        logger.exception("Can not compress file: {}", e)
         return image_content
 
 
 def should_compress_file(file_extension: str, file_size: int) -> bool:
+    logger.debug("Check should compress file.")
+
     # Не сжимаем очень маленькие файлы
     if file_size < 50 * 1024:  # 50KB
         return False
@@ -91,6 +102,8 @@ def should_compress_file(file_extension: str, file_size: int) -> bool:
 
 
 def save_uploaded_file(file: UploadFile) -> str:
+    logger.debug("Save uploaded file: {}", file)
+
     try:
         # Проверка расширения файла
         if file.filename is None:
@@ -99,6 +112,7 @@ def save_uploaded_file(file: UploadFile) -> str:
             )
         file_extension = Path(file.filename).suffix.lower()
         if file_extension not in ALLOWED_EXTENSIONS:
+            logger.warning("File format {} not allowed", file_extension)
             raise HTTPException(
                 status_code=400,
                 detail=f"""
@@ -112,6 +126,7 @@ def save_uploaded_file(file: UploadFile) -> str:
         file.file.seek(0)  # Возвращаемся в начало
 
         if file_size > MAX_FILE_SIZE:
+            logger.warning("File size too large: {}", file_size)
             raise HTTPException(
                 status_code=400,
                 detail=f"""
@@ -142,21 +157,25 @@ def save_uploaded_file(file: UploadFile) -> str:
             buffer.write(processed_content)
 
         # Возвращаем абсолютный URL для доступа к файлу
-        return f"{settings.api_base_url}/{settings.upload_dir}/{unique_filename}"
+        url = f"{settings.api_base_url}/{settings.upload_dir}/{unique_filename}"
+        logger.debug("Return image url: {}", url)
+        return url
 
-    except HTTPException:
-        raise
     except Exception as e:
+        logger.exception("Can not save file: {}", e)
         raise HTTPException(
             status_code=409, detail=f"Ошибка при сохранении файла: {str(e)}"
         ) from Exception
 
 
 def delete_uploaded_file_by_url(file_url: str) -> bool:
+    logger.debug("Delete image by url: {}", file_url)
+
     try:
         # Извлекаем имя файла из URL
         filename = extract_filename_from_url(file_url)
         if not filename:
+            logger.warning("Filename does not exist!")
             return False
 
         # Полный путь к файлу
@@ -164,20 +183,26 @@ def delete_uploaded_file_by_url(file_url: str) -> bool:
 
         # Проверяем существует ли файл
         if not file_path.exists():
+            logger.warning("File does not exist!")
             return False
 
         # Удаляем файл
         file_path.unlink()
 
+        logger.debug("File deleted")
+
         return True
 
     except Exception as e:
+        logger.exception("Can not delete file: {}", e)
         raise HTTPException(
             status_code=409, detail=f"Ошибка при удалении файла: {str(e)}"
         ) from Exception
 
 
 def extract_filename_from_url(file_url: str) -> str | None:
+    logger.debug("Extract filename form url: {}", file_url)
+
     try:
         # Убираем базовый URL и путь к директории
         base_url_with_path = f"{settings.api_base_url}/{settings.upload_dir}/"
@@ -186,7 +211,12 @@ def extract_filename_from_url(file_url: str) -> str | None:
             return file_url.replace(base_url_with_path, "")
 
         # Альтернативный вариант: извлекаем последнюю часть URL
-        return file_url.split("/")[-1]
+        filename = file_url.split("/")[-1]
 
-    except Exception:
+        logger.debug("Return filename: {}", filename)
+
+        return filename
+
+    except Exception as e:
+        logger.exception("Can not extract filename: {}", e)
         return None

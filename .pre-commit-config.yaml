@@ -40,6 +40,6 @@ repos:
     hooks:
       - id: run-pytest
         name: Run pytest
-        entry: make pytest
+        entry: make test
         language: system
         pass_filenames: false

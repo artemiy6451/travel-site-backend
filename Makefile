@@ -13,21 +13,21 @@ ruff:
 	@echo "Ruff done!"
 
 mypy:
-	poetry run mypy --config mypy.ini $(SRC) $(TESTS)
+	poetry run mypy --config mypy.ini $(SRC)
 	@echo "Mypy done!"
 
-pytest:
+test:
 	poetry run pytest $(SRC) $(TESTS)
 	@echo "Pytest done!"
 
-check: black ruff mypy pytest
+check: black ruff mypy test
 	@echo "All check passed!"
 
 run:
 	poetry run python $(SRC)main.py
 
 dev:
-	poetry run fastapi dev $(SRC)main.py --host 0.0.0.0 --port 8000
+	poetry run python -m app.main
 
 migrate:
 	PYTHONPATH=. poetry run alembic upgrade head

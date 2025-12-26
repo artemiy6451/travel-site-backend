@@ -51,6 +51,9 @@ class ExcursionModel(Base):
             id=self.id,
         )
 
+    def __repr__(self) -> str:
+        return self.to_read_model().__repr__()
+
 
 class ExcursionImageModel(Base):
     __tablename__ = "excursion_images"
@@ -68,6 +71,9 @@ class ExcursionImageModel(Base):
             excursion_id=self.excursion_id,
             url=self.url,
         )
+
+    def __repr__(self) -> str:
+        return self.to_read_model().__repr__()
 
 
 class ExcursionDetailsModel(Base):
@@ -100,3 +106,6 @@ class ExcursionDetailsModel(Base):
             id=self.id,
             excursion_id=self.excursion_id,
         )
+
+    def __repr__(self) -> str:
+        return self.to_read_model().__repr__()

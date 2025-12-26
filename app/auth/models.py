@@ -19,3 +19,6 @@ class UserModel(Base):
             is_active=self.is_active,
             is_superuser=self.is_superuser,
         )
+
+    def __repr__(self) -> str:
+        return self.to_read_model().__repr__()

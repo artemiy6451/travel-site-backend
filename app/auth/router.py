@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from app.auth.depends import get_current_user, get_user_service
 from app.auth.schemas import Token, UserCreate, UserSchema
@@ -14,7 +14,8 @@ login_router = APIRouter(tags=["Auth"])
 async def register(
     user: UserCreate, service: Annotated[UserService, Depends(get_user_service)]
 ) -> UserSchema:
-    return await service.create_user(user)
+    created_user = await service.create_user(user)
+    return created_user
 
 
 # Авторизация и получение токена
@@ -23,11 +24,6 @@ async def login(
     user: UserCreate, service: Annotated[UserService, Depends(get_user_service)]
 ) -> Token:
     authenticated_user = await service.authenticate_user(user.email, user.password)
-    if not authenticated_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. Admin privileges required.",
-        )
     token = service.get_token(authenticated_user)
     return token
 

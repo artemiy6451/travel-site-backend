@@ -172,3 +172,6 @@ static/*
 !static/default.jpg
 
 sheets.json
+
+logs/
+locust.py

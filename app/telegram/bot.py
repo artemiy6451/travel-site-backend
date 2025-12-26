@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 from aiogram import Bot, Dispatcher, html
 from aiogram.client.default import DefaultBotProperties
@@ -8,6 +7,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
 from app.config import settings
+from app.logging.utils import remove_all_logers, setup_new_logger
 from app.telegram.filter import ChatFilter
 from app.telegram.handlers import router
 
@@ -19,9 +19,9 @@ dp = Dispatcher()
 
 dp.include_router(router)
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+remove_all_logers()
+
+setup_new_logger()
 
 
 @dp.message(CommandStart())
@@ -32,7 +32,7 @@ async def command_start_handler(message: Message) -> None:
 
 
 @dp.message(Command("ping"), ChatFilter(settings.telegram_chat_id))
-async def test(message: Message) -> None:
+async def ping(message: Message) -> None:
     await message.answer("pong")
 
 

@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from loguru import logger
 
 from app.auth.schemas import UserSchema
 from app.auth.service import ALGORITHM, UserService
@@ -12,6 +13,7 @@ security = HTTPBearer()
 
 
 async def get_user_service() -> UserService:
+    logger.debug("Get user service")
     return UserService()
 
 
@@ -25,6 +27,7 @@ async def get_current_user(
         )
         email = payload.get("sub")
         if email is None:
+            logger.warning("Can not validate user credentials!")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
@@ -32,8 +35,10 @@ async def get_current_user(
             ) from JWTError
 
         is_superuser: bool = payload.get("is_superuser", False)
+        logger.debug("Found email: {}, is user admin: {}", email, is_superuser)
 
     except JWTError:
+        logger.warning("Can not validate user credentials!")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -42,6 +47,7 @@ async def get_current_user(
 
     user = await service.get_user_by_email(email=email)
     if user is None:
+        logger.warning("Can not validate user credentials!")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -56,6 +62,7 @@ def require_superuser(
     current_user: Annotated[UserSchema, Depends(get_current_user)],
 ) -> UserSchema:
     if not current_user.is_superuser:
+        logger.warning("Admin privileges required!")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
         )

@@ -437,4 +437,4 @@ class SheetsService:
         logger.info("Соединение с Google Sheets закрыто")
 
 
-sheets_service = SheetsService()
+# sheets_service = SheetsService()
