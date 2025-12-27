@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    network_mode: "host"
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    ports:
+      - "9080:9080"
+    volumes:
+      # Монтируем директории с логами с хоста
+      - /var/log:/var/log:ro  # Системные логи
+      - /home/lokach/code/travel-site-backend/logs:/app_logs:ro  # Логи вашего приложения
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro  # Docker контейнеры
+      # Конфигурация
+      - ./promtail-config.yaml:/etc/promtail/config.yml
+      - /tmp/promtail:/tmp  # Для positions файла
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    network_mode: "host"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+      - ./prometheus/rules:/etc/prometheus/rules
+
+    network_mode: "host"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+      - prometheus
+
+    network_mode: "host"
+
+volumes:
+  grafana_data:
+  prometheus_data:
+  loki_data:

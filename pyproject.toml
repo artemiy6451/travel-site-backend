@@ -24,6 +24,8 @@ gspread = "^6.2.1"
 google-auth = "^2.43.0"
 loguru = "^0.7.3"
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+prometheus-client = "^0.23.1"
+prometheus-fastapi-instrumentator = "^7.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.auth.router import login_router
 from app.booking.router import booking_router
@@ -48,6 +49,9 @@ app = FastAPI(
     version="0.1.0",
     openapi_url="/api/openapi.json",
 )
+
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 # Middleware
 app.add_middleware(LoggingMiddleware)
