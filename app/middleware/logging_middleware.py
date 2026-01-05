@@ -21,36 +21,38 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         start_time = time.time()
 
-        log.info(
-            (
-                "Request started with id: {request_id}, method: {method},"
-                "url: {url}, client_ip: {client_ip}, user_agent: {user_agent}"
-            ),
-            request_id=request_id,
-            method=request.method,
-            url=str(request.url),
-            client_ip=request.client.host if request.client else "unknown",
-            user_agent=request.headers.get("user-agent", ""),
-        )
+        if request.url.path != "/metrics":
+            log.info(
+                (
+                    "Request started with id: {request_id}, method: {method},"
+                    "url: {url}, client_ip: {client_ip}, user_agent: {user_agent}"
+                ),
+                request_id=request_id,
+                method=request.method,
+                url=str(request.url),
+                client_ip=request.client.host if request.client else "unknown",
+                user_agent=request.headers.get("user-agent", ""),
+            )
 
         try:
             response = await call_next(request)
 
             process_time = (time.time() - start_time) * 1000
 
-            log.info(
-                (
-                    "Request completed with id: {request_id}, method: {method},"
-                    "url: {url}, status_code: {status_code}, "
-                    "working time: {process_time}, response size: {response_size}"
-                ),
-                request_id=request_id,
-                method=request.method,
-                url=str(request.url),
-                status_code=response.status_code,
-                process_time=f"{process_time:.2f}ms",
-                response_size=response.headers.get("content-length", 0),
-            )
+            if request.url.path != "/metrics":
+                log.info(
+                    (
+                        "Request completed with id: {request_id}, method: {method},"
+                        "url: {url}, status_code: {status_code}, "
+                        "working time: {process_time}, response size: {response_size}"
+                    ),
+                    request_id=request_id,
+                    method=request.method,
+                    url=str(request.url),
+                    status_code=response.status_code,
+                    process_time=f"{process_time:.2f}ms",
+                    response_size=response.headers.get("content-length", 0),
+                )
             response.headers["X-Request-ID"] = request_id
 
             return response
