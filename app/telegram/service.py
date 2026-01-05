@@ -3,7 +3,7 @@ from typing import List, Optional
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
 
@@ -25,19 +25,18 @@ class TelegramNotificationService:
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
         )
 
-    def _get_keyboard(self, is_active: bool, booking_id: int) -> InlineKeyboardMarkup:
+    def _get_keyboard(self, booking: BookingSchema) -> InlineKeyboardMarkup:
         logger.debug(
             "Generate keyboard with is_active={} and booking_id={}",
-            is_active,
-            booking_id,
+            booking.is_active,
+            booking.id,
         )
         builder = InlineKeyboardBuilder()
-        builder.row(
-            InlineKeyboardButton(
-                text=f"{'❌ Отменить' if is_active else '✅ Подтвердить'}",
-                callback_data=f"toggle_booking:{booking_id}",
-            )
+        builder.button(
+            text=f"{'❌ Отменить' if booking.is_active else '✅ Подтвердить'}",
+            callback_data=f"toggle_booking:{booking.id}",
         )
+        builder.adjust(1)
         return builder.as_markup()
 
     async def send_notification(
@@ -71,7 +70,7 @@ class TelegramNotificationService:
                 chat_id=settings.telegram_chat_id,
                 text=text,
                 parse_mode=ParseMode.HTML,
-                reply_markup=self._get_keyboard(booking.is_active, booking.id),
+                reply_markup=self._get_keyboard(booking),
             )
         except Exception as e:
             logger.exception("Can not send message: {}", e)
@@ -112,7 +111,7 @@ class TelegramNotificationService:
         await callback.message.edit_text(  # type: ignore
             text=text,
             parse_mode=ParseMode.HTML,
-            reply_markup=self._get_keyboard(booking.is_active, booking.id),
+            reply_markup=self._get_keyboard(booking),
         )
 
     async def close(self) -> None:
