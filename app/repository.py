@@ -51,6 +51,7 @@ class SQLAlchemyRepository(Generic[T]):
         self,
         join_by: Any | None = None,
         filter_by: ColumnElement[bool] | None = None,
+        order_by: Any | None = None,
         offset: int = 0,
         limit: int = 100,
     ) -> list[T]:
@@ -74,6 +75,8 @@ class SQLAlchemyRepository(Generic[T]):
             if filter_by is not None:
                 stmt = stmt.where(filter_by)
 
+            if order_by is not None:
+                stmt = stmt.order_by(order_by)
             stmt = stmt.offset(offset).limit(limit)
 
             logger.debug("Final statement: {}", stmt)
@@ -81,7 +84,7 @@ class SQLAlchemyRepository(Generic[T]):
             result = await s.execute(stmt)
             res = [row[0] for row in result.all()]
 
-            logger.debug("Returning from `find_all`: {}", res)
+            logger.debug("Returning from `find_all`: {} excursions", len(res))
 
             return res
 

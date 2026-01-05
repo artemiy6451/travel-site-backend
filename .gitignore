@@ -175,3 +175,4 @@ sheets.json
 
 logs/
 locust.py
+.backups/

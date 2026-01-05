@@ -11,18 +11,17 @@ from starlette.types import ASGIApp
 class LoggingMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp):
         super().__init__(app)
-        self.logger = logger.bind(context="http")
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        # Генерируем уникальный ID для запроса
+        log = logger.bind(context="http")
         request_id = str(uuid4())
+        request.state.request_id = request_id
 
-        # Логируем входящий запрос
         start_time = time.time()
 
-        self.logger.debug(
+        log.info(
             (
                 "Request started with id: {request_id}, method: {method},"
                 "url: {url}, client_ip: {client_ip}, user_agent: {user_agent}"
@@ -35,14 +34,11 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         )
 
         try:
-            # Продолжаем обработку запроса
             response = await call_next(request)
 
-            # Вычисляем время выполнения
             process_time = (time.time() - start_time) * 1000
 
-            # Логируем результат
-            self.logger.debug(
+            log.info(
                 (
                     "Request completed with id: {request_id}, method: {method},"
                     "url: {url}, status_code: {status_code}, "
@@ -55,16 +51,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 process_time=f"{process_time:.2f}ms",
                 response_size=response.headers.get("content-length", 0),
             )
-            # Добавляем request_id в заголовки ответа (для отладки)
             response.headers["X-Request-ID"] = request_id
 
             return response
 
         except Exception as exc:
-            # Логируем ошибку
             process_time = (time.time() - start_time) * 1000
 
-            self.logger.error(
+            log.exception(
                 (
                     "Request completed with id: {request_id}, method: {method},"
                     "url: {url}, working time: {process_time}, error: {error}"
@@ -76,8 +70,4 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 error=exc,
                 exc_info=True,
             )
-            return Response(
-                status_code=500,
-                content=f"Internal Server Error - Request ID: {request_id}",
-                headers={"X-Request-ID": request_id},
-            )
+            raise

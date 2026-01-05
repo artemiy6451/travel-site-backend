@@ -1,0 +1,9 @@
+📋 БРОНИРОВАНИЯ НА ЭКСКУРСИЮ
+
+<b>Экскурсия:</b> {{ excursion.title }}
+<b>Забронировалось:</b> {{ total_people }}
+<b>Общая выручка:</b> {{ total_sum }}
+
+{% for booking in bookings %}
+{{ loop.index }}: <b>{{ booking.last_name }} {{ booking.first_name }}</b>({{ booking.phone_number }}) — {{ booking.total_people }}ч.
+{% endfor %}

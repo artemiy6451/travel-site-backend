@@ -56,8 +56,21 @@ class ExcurionService:
         logger.debug("Get excursions with offset={!r} and limit={!r}", offset, limit)
 
         excursions = await self.excursion_repository.find_all(
-            offset=offset,
-            limit=limit,
+            offset=offset, limit=limit, order_by=ExcursionModel.date
+        )
+        return [excursion.to_read_model() for excursion in excursions]
+
+    async def get_active_excursions(
+        self,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> list[ExcursionScheme]:
+        logger.debug(
+            "Get active excursions with offset={!r} and limit={!r}", offset, limit
+        )
+        filter_by = ExcursionModel.is_active == True  # noqa: E712
+        excursions = await self.excursion_repository.find_all(
+            offset=offset, limit=limit, filter_by=filter_by, order_by=ExcursionModel.date
         )
         return [excursion.to_read_model() for excursion in excursions]
 

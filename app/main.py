@@ -13,16 +13,12 @@ from app.auth.router import login_router
 from app.booking.router import booking_router
 from app.config import settings
 from app.excursions.router import excursion_router
-from app.logging.utils import remove_all_logers, setup_new_logger
-from app.middleware.logging_middleware import LoggingMiddleware
+from app.logging import setup_new_logger
 from app.redis_config import redis_client
 from app.reviews.router import reviews_router
 from app.telegram.service import telegram_service
 
 locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
-
-remove_all_logers()
-
 setup_new_logger()
 
 
@@ -54,7 +50,7 @@ instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app)
 
 # Middleware
-app.add_middleware(LoggingMiddleware)
+# app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

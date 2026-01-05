@@ -7,7 +7,7 @@ from app.excursions.service import ExcurionService
 from app.repository import SQLAlchemyRepository
 
 # from app.sheets.service import SheetsService, sheets_service
-from app.telegram.service import TelegramService, telegram_service
+from app.telegram.service import TelegramNotificationService, telegram_service
 
 
 class BookingService:
@@ -18,7 +18,7 @@ class BookingService:
         self.excursion_repository: SQLAlchemyRepository[ExcursionModel] = (
             SQLAlchemyRepository(async_session_maker, ExcursionModel)
         )
-        self.telegram_service: TelegramService = telegram_service
+        self.telegram_service: TelegramNotificationService = telegram_service
         # self.sheets_service: SheetsService = sheets_service
         self.excursion_service: ExcurionService = ExcurionService()
 
@@ -41,9 +41,9 @@ class BookingService:
 
         return formated_booking
 
-    async def get_all_bookings(self) -> list[BookingSchema]:
+    async def get_all_bookings(self, excursion_id: int) -> list[BookingSchema]:
         join_by = ExcursionModel
-        filter_by = ExcursionModel.is_active == True  # noqa: E712
+        filter_by = (ExcursionModel.id == excursion_id) & (BookingModel.is_active)
         bookings = await self.booking_repository.find_all(
             join_by=join_by, filter_by=filter_by
         )

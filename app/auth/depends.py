@@ -11,6 +11,11 @@ from app.config import settings
 
 security = HTTPBearer()
 
+logger.debug("Debug")
+logger.info("Info")
+logger.warning("Can not validate user credentials!")
+logger.error("Error")
+
 
 async def get_user_service() -> UserService:
     logger.debug("Get user service")
@@ -21,13 +26,17 @@ async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> UserSchema:
+    print(logger)
+    logger.debug("Debug")
+    logger.info("Info")
+    logger.warning("Can not validate user credentials!")
+    logger.error("Error")
     try:
         payload = jwt.decode(
             credentials.credentials, settings.secret_key, algorithms=[ALGORITHM]
         )
         email = payload.get("sub")
         if email is None:
-            logger.warning("Can not validate user credentials!")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",

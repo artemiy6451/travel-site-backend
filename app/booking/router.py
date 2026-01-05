@@ -27,10 +27,11 @@ async def create_booking(
 
 @booking_router.get("/bookings")
 async def get_all_bookings(
+    excursion_id: int,
     service: Annotated[BookingService, Depends(get_booking_service)],
     # _: Annotated[UserSchema, Depends(require_superuser)]
 ) -> list[BookingSchema]:
-    bookings = await service.get_all_bookings()
+    bookings = await service.get_all_bookings(excursion_id)
     return bookings
 
 

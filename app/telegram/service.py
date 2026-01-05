@@ -10,9 +10,10 @@ from loguru import logger
 from app.booking.schemas import BookingSchema
 from app.config import settings
 from app.excursions.schemas import ExcursionScheme
+from app.template_loader import render_template
 
 
-class TelegramService:
+class TelegramNotificationService:
     def __init__(self) -> None:
         self.bot: Optional[Bot] = None
         self.notification_chat_ids: List[int] = []
@@ -50,20 +51,17 @@ class TelegramService:
             booking,
         )
 
-        message = (
-            "🎫 <b>НОВОЕ БРОНИРОВАНИЕ</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            f"<b>ID:</b> <code>#{booking.id}</code>\n"
-            f"<b>Экскурсия:</b> {excursion.title}\n"
-            f"<b>Дата:</b> {excursion.date.strftime('%d %B')}\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            f"<b>Клиент:</b> {booking.last_name} {booking.first_name}\n"
-            f"<b>Телефон:</b> {booking.phone_number}\n"
-            f"<b>Кол-во гостей:</b> {booking.total_people}\n"
-            f"<b>Сумма:</b> {excursion.price * booking.total_people} руб.\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            f"<b>Статус:</b> {'🟢 Активна' if booking.is_active else '🔴 В обработке'}"
+        context = {
+            "booking": booking.model_dump(),
+            "excursion": excursion.model_dump(),
+            "formated_date": excursion.date.strftime("%d %B"),
+            "sum": booking.total_people * excursion.price,
+        }
+        logger.debug(
+            "Generate context with len: {} and context: {}", len(context), context
         )
+
+        text = render_template("booking.html", **context)
 
         if not self.bot:
             return False
@@ -71,7 +69,7 @@ class TelegramService:
         try:
             await self.bot.send_message(
                 chat_id=settings.telegram_chat_id,
-                text=message,
+                text=text,
                 parse_mode=ParseMode.HTML,
                 reply_markup=self._get_keyboard(booking.is_active, booking.id),
             )
@@ -81,29 +79,40 @@ class TelegramService:
 
         return True
 
-    async def toggle_status(self, callback: CallbackQuery, booking_id: int) -> None:
+    async def toggle_status(
+        self,
+        callback: CallbackQuery,
+        booking: BookingSchema,
+        excursion: ExcursionScheme,
+    ) -> None:
         logger.debug(
             (
                 "Toggle booking status with callback={callback!r}"
                 "and booking_id={booking_id!r}"
             ),
             callback=callback,
-            booking_id=booking_id,
+            booking_id=booking.id,
         )
-        if "🟢 Активна" in callback.message.text:  # type: ignore
-            message = callback.message.text.replace("🟢 Активна", "🔴 В обработке")  # type: ignore
-            is_active = False
-        elif "🔴 В обработке" in callback.message.text:  # type: ignore
-            message = callback.message.text.replace("🔴 В обработке", "🟢 Активна")  # type: ignore
-            is_active = True
-        else:
-            message = callback.message.text  # type: ignore
-            is_active = True
+
+        if callback.message is None:
+            logger.warning(
+                (
+                    "Can not find message for booking={!r},"
+                    "excursion={!r} and callback={!r}"
+                ),
+                booking,
+                excursion,
+                callback,
+            )
+            return
+
+        context = self.generate_context(booking=booking, excursion=excursion)
+        text = render_template("booking.html", **context)
 
         await callback.message.edit_text(  # type: ignore
-            message,
-            parse_mode="HTML",
-            reply_markup=self._get_keyboard(is_active, booking_id),
+            text=text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=self._get_keyboard(booking.is_active, booking.id),
         )
 
     async def close(self) -> None:
@@ -111,5 +120,15 @@ class TelegramService:
         if self.bot:
             await self.bot.session.close()
 
+    @staticmethod
+    def generate_context(booking: BookingSchema, excursion: ExcursionScheme) -> dict:
+        context = {
+            "booking": booking.model_dump(),
+            "excursion": excursion.model_dump(),
+            "formated_date": excursion.date.strftime("%d %B"),
+            "sum": booking.total_people * excursion.price,
+        }
+        return context
 
-telegram_service = TelegramService()
+
+telegram_service = TelegramNotificationService()
