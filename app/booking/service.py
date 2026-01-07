@@ -1,13 +1,14 @@
+from faststream.rabbit import RabbitQueue
+from faststream.rabbit.annotations import RabbitBroker
+
 from app.booking.models import BookingModel
 from app.booking.schemas import BookingCreate, BookingSchema
 from app.database import async_session_maker
 from app.excursions.models import ExcursionModel
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
+from app.rabbitmq import get_rabit_broker
 from app.repository import SQLAlchemyRepository
-
-# from app.sheets.service import SheetsService, sheets_service
-from app.telegram.service import TelegramNotificationService, telegram_service
 
 
 class BookingService:
@@ -18,9 +19,8 @@ class BookingService:
         self.excursion_repository: SQLAlchemyRepository[ExcursionModel] = (
             SQLAlchemyRepository(async_session_maker, ExcursionModel)
         )
-        self.telegram_service: TelegramNotificationService = telegram_service
-        # self.sheets_service: SheetsService = sheets_service
         self.excursion_service: ExcurionService = ExcurionService()
+        self.rabit_broker: RabbitBroker = get_rabit_broker()
 
     async def create_booking(self, booking: BookingCreate) -> BookingSchema | None:
         get_excursion = await self.excursion_repository.find_one(
@@ -37,7 +37,6 @@ class BookingService:
         await self._send_booking_notification(
             booking=formated_booking, excursion=excursion
         )
-        # self.sheets_service.add_booking(formated_booking, excursion)
 
         return formated_booking
 
@@ -84,17 +83,15 @@ class BookingService:
                 get_excursion.id, -formated_booking.total_people
             )
 
-        # excursion = get_excursion.to_read_model()
-
-        # self.sheets_service.update_booking_status(
-        # booking=formated_booking, excursion=excursion
-        # )
-
         return formated_booking
 
     async def _send_booking_notification(
         self, booking: BookingSchema, excursion: ExcursionScheme
     ) -> None:
-        await self.telegram_service.send_notification(
-            booking=booking, excursion=excursion
-        )
+        async with self.rabit_broker:
+            await self.rabit_broker.connect()
+            await self.rabit_broker.declare_queue(RabbitQueue("bookings"))
+            await self.rabit_broker.publish(
+                [booking.model_dump_json(), excursion.model_dump_json()],
+                queue="bookings",
+            )

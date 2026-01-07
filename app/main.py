@@ -17,7 +17,6 @@ from app.logging import setup_new_logger
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.redis_config import redis_client
 from app.reviews.router import reviews_router
-from app.telegram.service import telegram_service
 
 locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 setup_new_logger()
@@ -36,7 +35,6 @@ async def lifespan(_: FastAPI) -> Any:
     yield
 
     redis_client.close()
-    await telegram_service.close()
     logger.info("Shutting down application...")
 
 

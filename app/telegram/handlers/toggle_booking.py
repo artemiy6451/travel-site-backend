@@ -1,10 +1,14 @@
 from aiogram import F, Router
+from aiogram.enums.parse_mode import ParseMode
 from aiogram.types import CallbackQuery
 from loguru import logger
 
+from app.booking.schemas import BookingSchema
 from app.booking.service import BookingService
+from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
-from app.telegram.service import telegram_service
+from app.telegram.utils import generate_context, get_keyboard
+from app.template_loader import render_template
 
 toggle_booking_router = Router()
 
@@ -35,7 +39,7 @@ async def handle_toggle_booking(callback: CallbackQuery) -> None:
 
         status = "✅ активирована" if updated_booking.is_active else "❌ отменена"
 
-        await telegram_service.toggle_status(callback, updated_booking, excursion)
+        await toggle_status(callback, updated_booking, excursion)
 
         message = f"Бронь #{booking_id} {status}!"
         await callback.answer(message)
@@ -45,3 +49,36 @@ async def handle_toggle_booking(callback: CallbackQuery) -> None:
     except Exception as e:
         logger.exception(f"Ошибка обработки toggle_booking: {e}")
         await callback.answer("Произошла ошибка!", show_alert=True)
+
+
+async def toggle_status(
+    callback: CallbackQuery,
+    booking: BookingSchema,
+    excursion: ExcursionScheme,
+) -> None:
+    logger.debug(
+        (
+            "Toggle booking status with callback={callback!r}"
+            "and booking_id={booking_id!r}"
+        ),
+        callback=callback,
+        booking_id=booking.id,
+    )
+
+    if callback.message is None:
+        logger.warning(
+            ("Can not find message for booking={!r},excursion={!r} and callback={!r}"),
+            booking,
+            excursion,
+            callback,
+        )
+        return
+
+    context = generate_context(booking=booking, excursion=excursion)
+    text = render_template("booking.html", **context)
+
+    await callback.message.edit_text(  # type: ignore
+        text=text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=get_keyboard(booking),
+    )
