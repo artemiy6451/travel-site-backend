@@ -21,13 +21,25 @@ excursion_router = APIRouter(tags=["Excursion"])
 
 
 # ===== Public ручки для работы с ExcursionModel =====
-@excursion_router.get("/excursions", response_model=list[ExcursionScheme])
-async def read_excursions(
+@excursion_router.get("/excursions/active", response_model=list[ExcursionScheme])
+async def get_active_excursions(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
     skip: int = 0,
     limit: int = 100,
 ) -> list[ExcursionScheme]:
-    return await service.get_excursions(
+    return await service.get_active_excursions(
+        offset=skip,
+        limit=limit,
+    )
+
+
+@excursion_router.get("/excursions/not_active", response_model=list[ExcursionScheme])
+async def get_not_active_excursions(
+    service: Annotated[ExcurionService, Depends(get_excursion_service)],
+    skip: int = 0,
+    limit: int = 100,
+) -> list[ExcursionScheme]:
+    return await service.get_not_active_excursions(
         offset=skip,
         limit=limit,
     )
