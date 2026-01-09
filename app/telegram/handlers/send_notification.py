@@ -9,7 +9,7 @@ from app.telegram.utils import get_keyboard
 from app.template_loader import render_template
 
 
-async def send_notification(
+async def send_booking(
     bot: Bot,
     excursion: ExcursionScheme,
     booking: BookingSchema,
@@ -42,3 +42,15 @@ async def send_notification(
         raise Exception("Can not send message") from e
 
     return True
+
+
+async def send_error(bot: Bot, error_msg: str) -> None:
+    logger.debug("Send notification with error_msg={}", error_msg)
+    try:
+        await bot.send_message(
+            chat_id=settings.telegram_admin_id,
+            text=error_msg,
+        )
+    except Exception as e:
+        logger.exception("Can not send message: {}", e)
+        raise Exception("Can not send message") from e

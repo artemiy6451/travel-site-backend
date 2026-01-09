@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Awaitable, Callable
 from uuid import uuid4
@@ -6,6 +7,9 @@ from fastapi import Request, Response
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
+
+from app.notifications import Notifications
+from app.rabbitmq import rabbit_broker
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -72,4 +76,28 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 error=exc,
                 exc_info=True,
             )
+            asyncio.create_task(
+                self._send_to_telegram(
+                    request_id=request_id,
+                    method=request.method,
+                    url=str(request.url),
+                    process_time=f"{process_time:.2f}ms",
+                    error=exc,
+                )
+            )
             raise
+
+    async def _send_to_telegram(
+        self,
+        request_id: str,
+        method: str,
+        url: str,
+        process_time: str,
+        error: Exception,
+    ) -> None:
+        async with Notifications(rabbit_broker, "errors") as ns:
+            message = (
+                f"Request completed with id: {request_id}, method: {method},"
+                f"url: {url}, working time: {process_time}, error: {error}"
+            )
+            await ns.send_to_rabbit([message])

@@ -95,6 +95,7 @@ def setup_new_logger() -> None:
         "fastapi",
         "starlette",
         "asyncio",
+        "faststream",
     ):
         logging_logger = logging.getLogger(logger_name)
         logging_logger.handlers = [InterceptHandler()]

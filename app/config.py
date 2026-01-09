@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     telegram_token: str = ""
     telegram_chat_id: int = 0
+    telegram_admin_id: int = 0
 
     sheets_credentials_path: str = "sheets.json"
     spreadsheet_id: str = ""

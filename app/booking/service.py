@@ -1,5 +1,4 @@
-from faststream.rabbit import RabbitQueue
-from faststream.rabbit.annotations import RabbitBroker
+import asyncio
 
 from app.booking.models import BookingModel
 from app.booking.schemas import BookingCreate, BookingSchema
@@ -7,7 +6,8 @@ from app.database import async_session_maker
 from app.excursions.models import ExcursionModel
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
-from app.rabbitmq import get_rabit_broker
+from app.notifications import Notifications
+from app.rabbitmq import rabbit_broker
 from app.repository import SQLAlchemyRepository
 
 
@@ -20,7 +20,6 @@ class BookingService:
             SQLAlchemyRepository(async_session_maker, ExcursionModel)
         )
         self.excursion_service: ExcurionService = ExcurionService()
-        self.rabit_broker: RabbitBroker = get_rabit_broker()
 
     async def create_booking(self, booking: BookingCreate) -> BookingSchema | None:
         get_excursion = await self.excursion_repository.find_one(
@@ -34,10 +33,11 @@ class BookingService:
         new_booking = await self.booking_repository.add_one(booking.model_dump())
         formated_booking = new_booking.to_read_model()
 
-        await self._send_booking_notification(
-            booking=formated_booking, excursion=excursion
+        asyncio.create_task(
+            self._send_booking_notification(
+                booking=formated_booking, excursion=excursion
+            )
         )
-
         return formated_booking
 
     async def get_all_bookings(self, excursion_id: int) -> list[BookingSchema]:
@@ -88,10 +88,10 @@ class BookingService:
     async def _send_booking_notification(
         self, booking: BookingSchema, excursion: ExcursionScheme
     ) -> None:
-        async with self.rabit_broker:
-            await self.rabit_broker.connect()
-            await self.rabit_broker.declare_queue(RabbitQueue("bookings"))
-            await self.rabit_broker.publish(
-                [booking.model_dump_json(), excursion.model_dump_json()],
-                queue="bookings",
+        async with Notifications(broker=rabbit_broker, queue="bookings") as ns:
+            await ns.send_to_rabbit(
+                [
+                    booking.model_dump_json(),
+                    excursion.model_dump_json(),
+                ]
             )
