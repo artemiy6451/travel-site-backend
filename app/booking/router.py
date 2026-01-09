@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from loguru import logger
 
 from app.auth.depends import require_superuser
 from app.auth.schemas import UserSchema
@@ -18,7 +17,6 @@ async def create_booking(
     service: Annotated[BookingService, Depends(get_booking_service)],
 ) -> BookingSchema:
     new_booking = await service.create_booking(booking=booking)
-    logger.warning("Booking created!")
     if new_booking is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
