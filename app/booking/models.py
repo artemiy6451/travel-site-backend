@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,9 +22,12 @@ class BookingModel(Base):
     total_people: Mapped[int] = mapped_column(nullable=False)
     children: Mapped[int] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.now())
+    confirmed_at: Mapped[datetime] = mapped_column(nullable=True, default=None)
 
     def to_read_model(self) -> BookingSchema:
         return BookingSchema(
+            id=self.id,
             excursion_id=self.excursion_id,
             first_name=self.first_name,
             last_name=self.last_name,
@@ -30,5 +35,6 @@ class BookingModel(Base):
             total_people=self.total_people,
             children=self.children,
             is_active=self.is_active,
-            id=self.id,
+            created_at=self.created_at,
+            confirmed_at=self.confirmed_at,
         )

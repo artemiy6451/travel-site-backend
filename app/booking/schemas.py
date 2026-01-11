@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -11,8 +13,10 @@ class BookingCreate(BaseModel):
 
 
 class BookingSchema(BookingCreate):
-    is_active: bool
     id: int
+    is_active: bool
+    created_at: datetime
+    confirmed_at: datetime | None
 
     class Config:
         from_attributes = True

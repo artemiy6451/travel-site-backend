@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 from app.booking.models import BookingModel
 from app.booking.schemas import BookingCreate, BookingSchema
@@ -69,7 +70,11 @@ class BookingService:
             return None
 
         new_booking = await self.booking_repository.update_one(
-            id=booking_id, data={"is_active": not booking.is_active}
+            id=booking_id,
+            data={
+                "is_active": not booking.is_active,
+                "confirmed_at": datetime.now() if not booking.is_active else None,
+            },
         )
 
         formated_booking = new_booking.to_read_model()

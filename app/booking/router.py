@@ -39,7 +39,7 @@ async def get_all_bookings(
 async def booking_toggle(
     id: int,
     service: Annotated[BookingService, Depends(get_booking_service)],
-    _: Annotated[UserSchema, Depends(require_superuser)],
+    # _: Annotated[UserSchema, Depends(require_superuser)],
 ) -> BookingSchema:
     booking = await service.toggle_booking(booking_id=id)
     if booking is None:
