@@ -1,16 +1,14 @@
 import hashlib
 import json
-import logging
 from datetime import datetime
 from functools import wraps
 from json.encoder import JSONEncoder
 from typing import Any, Callable
 
+from loguru import logger
 from redis import Redis
 
 from app.redis_config import redis_client
-
-logger = logging.getLogger(__name__)
 
 KEY_LEN = 200
 
@@ -134,6 +132,7 @@ def _generate_cache_key(func_name: str, prefix: str, args: tuple, kwargs: dict) 
 
     # Создаем хеш для длинных ключей
     key_string = ":".join(key_parts)
+    logger.warning(key_string)
     if len(key_string) > KEY_LEN:
         key_hash = hashlib.md5(key_string.encode()).hexdigest()
         return (
@@ -160,3 +159,7 @@ def _convert_to_serializable(obj: Any) -> Any:  # noqa: PLR0911
         return _convert_to_serializable(obj.__dict__)
     else:
         return str(obj)
+
+
+redis_cache.set("testkey", "testvalue")
+logger.success(redis_cache.get("testkey"))

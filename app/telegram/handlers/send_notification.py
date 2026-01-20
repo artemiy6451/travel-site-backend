@@ -24,6 +24,7 @@ async def send_booking(
         "booking": booking.model_dump(),
         "excursion": excursion.model_dump(),
         "formated_date": excursion.date.strftime("%d %B"),
+        "formated_created_at": booking.created_at.strftime("%d %B %H:%m"),
         "sum": booking.total_people * excursion.price,
     }
     logger.debug("Generate context with len: {} and context: {}", len(context), context)

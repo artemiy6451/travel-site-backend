@@ -35,7 +35,7 @@ class ExcurionService:
             SQLAlchemyRepository(async_session_maker, ExcursionImageModel)
         )
 
-    @cached(ttl=settings.ttl, key_prefix="excursion")
+    @cached(ttl=settings.ttl, key_prefix="one_excursion")
     async def get_excursion(self, excursion_id: int) -> ExcursionScheme:
         logger.debug("Get excursion with id: {id!r}", id=excursion_id)
 
@@ -47,7 +47,7 @@ class ExcurionService:
 
         return excursion.to_read_model()
 
-    @cached(ttl=settings.ttl, key_prefix="excursions")
+    @cached(ttl=settings.ttl, key_prefix="active_excursions")
     async def get_active_excursions(
         self,
         offset: int = 0,
@@ -62,6 +62,7 @@ class ExcurionService:
         )
         return [excursion.to_read_model() for excursion in excursions]
 
+    @cached(ttl=settings.ttl, key_prefix="not_active_excursions")
     async def get_not_active_excursions(
         self,
         offset: int = 0,
@@ -77,6 +78,7 @@ class ExcurionService:
         )
         return [excursion.to_read_model() for excursion in excursions]
 
+    @cached(ttl=settings.ttl, key_prefix="excurion_excursion_images")
     async def get_excursion_images(
         self, excursion_id: int
     ) -> list[ExcursionImageSchema]:
@@ -87,7 +89,51 @@ class ExcurionService:
         )
         return [image.to_read_model() for image in images]
 
-    @cached(ttl=settings.ttl, key_prefix="excursions")
+    @cached(ttl=settings.ttl, key_prefix="excursion_details")
+    async def get_excursion_details(self, excursion_id: int) -> ExcursionDetailsScheme:
+        logger.debug(
+            "Get excursion details for excursion with id: {!r}",
+            excursion_id,
+        )
+
+        details = await self.details_repository.find_one(
+            filter=(ExcursionDetailsModel.excursion_id == excursion_id)
+        )
+        if details is None:
+            raise HTTPException(status_code=404, detail="Excursion details not found")
+
+        return details.to_read_model()
+
+    @cached(ttl=settings.ttl, key_prefix="excursion_full")
+    async def get_excursion_full_info(self, excursion_id: int) -> ExcursionFullScheme:
+        logger.debug(
+            "Get full info about excursion with id: {!r}",
+            excursion_id,
+        )
+
+        excursion = await self.get_excursion(excursion_id)
+        details = await self.get_excursion_details(excursion_id)
+        images = await self.get_excursion_images(excursion_id)
+
+        result = ExcursionFullScheme(
+            title=excursion.title,
+            description=excursion.description,
+            date=excursion.date,
+            price=excursion.price,
+            bus_number=excursion.bus_number,
+            people_amount=excursion.people_amount,
+            people_left=excursion.people_left,
+            is_active=excursion.is_active,
+            id=excursion.id,
+        )
+
+        if details:
+            result.details = details
+        if images:
+            result.images = images
+
+        return result
+
     async def add_excurion_image(
         self, image: UploadFile, excursion_id: int
     ) -> ExcursionImageSchema:
@@ -105,29 +151,13 @@ class ExcurionService:
         new_image = await self.images_repository.add_one(data)
         return new_image.to_read_model()
 
-    async def delete_excursion_image(self, image_id: int) -> bool:
-        logger.debug(
-            "Delete image with id={id!r}",
-            id=image_id,
-        )
-        image = await self.images_repository.find_one(
-            filter=(ExcursionImageModel.id == image_id)
-        )
-        if image is None:
-            return False
-
-        delete_uploaded_file_by_url(image.url)
-
-        await self.images_repository.delete_one(id=image_id)
-        return True
-
     @invalidate_cache(
-        "excursions*",
-        "excursion*",
-        "excursion_full*",
+        "not_active_excursions*",
+        "active_excursions*",
+        "excurion_excursion_images*",
+        "excursions_search*",
         "excursion_details*",
-        "excursion_with_details*",
-        "excursions_images",
+        "excursion_full*",
     )
     async def create_excursion(
         self, excursion: ExcursionCreateScheme
@@ -145,11 +175,43 @@ class ExcurionService:
         return created_excursion.to_read_model()
 
     @invalidate_cache(
-        "excursions*",
-        "excursion*",
-        "excursion_full*",
         "excursion_details*",
-        "excursion_with_details*",
+        "excursion_full*",
+    )
+    async def create_excursion_details(
+        self, excursion_id: int, details: ExcursionDetailsCreateScheme
+    ) -> ExcursionDetailsScheme:
+        logger.debug(
+            (
+                "Create excursion details for excursion with id={id!r}"
+                "and deatils={details!r}"
+            ),
+            id=excursion_id,
+            details=details,
+        )
+
+        await self.get_excursion(excursion_id)
+        old_details = await self.details_repository.find_one(
+            filter=(ExcursionDetailsModel.excursion_id == excursion_id)
+        )
+        if old_details:
+            raise HTTPException(
+                status_code=404, detail="Excursion details already exist"
+            )
+
+        creation_data = {**details.model_dump()}
+        creation_data["excursion_id"] = excursion_id
+
+        new_details = await self.details_repository.add_one(data=creation_data)
+        return new_details.to_read_model()
+
+    @invalidate_cache(
+        "not_active_excursions*",
+        "active_excursions*",
+        "excurion_excursion_images*",
+        "excursions_search*",
+        "excursion_details*",
+        "excursion_full*",
     )
     async def update_excursion(
         self, excursion_id: int, excursion_update: ExcursionUpdateScheme
@@ -167,6 +229,30 @@ class ExcurionService:
         )
         return new_excursion.to_read_model()
 
+    @invalidate_cache(
+        "excursion_details*",
+        "excursion_full*",
+    )
+    async def update_excursion_details(
+        self, excursion_id: int, details_update: ExcursionDetailsUpdateScheme
+    ) -> ExcursionDetailsScheme:
+        logger.debug(
+            (
+                "Update excursion details for excursion with id={id!r}"
+                "and deatils={details!r}"
+            ),
+            id=excursion_id,
+            details=details_update,
+        )
+
+        await self.get_excursion(excursion_id)
+        details = await self.get_excursion_details(excursion_id=excursion_id)
+
+        updated_details = await self.details_repository.update_one(
+            id=details.id, data=details_update.model_dump()
+        )
+        return updated_details.to_read_model()
+
     @cached(ttl=settings.ttl, key_prefix="excursions_search")
     async def search_excursions(self, search_term: str) -> list[ExcursionScheme]:
         logger.debug("Search excursion by serch term: {!r}", search_term)
@@ -179,16 +265,51 @@ class ExcurionService:
         return [excursion.to_read_model() for excursion in excursions]
 
     @invalidate_cache(
-        "excursions*",
-        "excursion*",
-        "excursion_full*",
+        "not_active_excursions*",
+        "active_excursions*",
+        "excurion_excursion_images*",
+        "excursions_search*",
         "excursion_details*",
-        "excursion_with_details*",
+        "excursion_full*",
     )
     async def delete_excursion(self, excursion_id: int) -> bool:
         logger.debug("Delete excursion with id: {!r}", excursion_id)
 
         await self.excursion_repository.delete_one(id=excursion_id)
+        return True
+
+    @invalidate_cache(
+        "not_active_excursions*",
+        "active_excursions*",
+        "excurion_excursion_images*",
+        "excursions_search*",
+        "excursion_details*",
+        "excursion_full*",
+    )
+    async def delete_excursion_image(self, image_id: int) -> bool:
+        logger.debug(
+            "Delete image with id={id!r}",
+            id=image_id,
+        )
+        image = await self.images_repository.find_one(
+            filter=(ExcursionImageModel.id == image_id)
+        )
+        if image is None:
+            return False
+
+        delete_uploaded_file_by_url(image.url)
+
+        await self.images_repository.delete_one(id=image_id)
+        return True
+
+    @invalidate_cache("excursion_details*", "excursion_full*", "excursion_with_details*")
+    async def delete_excursion_details(self, excursion_id: int) -> bool:
+        logger.debug(
+            "Delete excursion details for excursion with id: {!r}", excursion_id
+        )
+
+        details = await self.get_excursion_details(excursion_id=excursion_id)
+        await self.details_repository.delete_one(id=details.id)
         return True
 
     @invalidate_cache(
@@ -216,7 +337,7 @@ class ExcurionService:
         "excursion_details*",
         "excursion_with_details*",
     )
-    async def add_people_left(
+    async def change_people_left(
         self, excursion_id: int, count_people: int
     ) -> ExcursionScheme:
         logger.debug(
@@ -274,106 +395,5 @@ class ExcurionService:
         )
         return updated_excursion.to_read_model()
 
-    @cached(ttl=settings.ttl, key_prefix="excursion_details")
-    async def get_excursion_details(self, excursion_id: int) -> ExcursionDetailsScheme:
-        logger.debug(
-            "Get excursion details for excursion with id: {!r}",
-            excursion_id,
-        )
-
-        details = await self.details_repository.find_one(
-            filter=(ExcursionDetailsModel.excursion_id == excursion_id)
-        )
-        if details is None:
-            raise HTTPException(status_code=404, detail="Excursion details not found")
-
-        return details.to_read_model()
-
-    @cached(ttl=settings.ttl, key_prefix="excursion_full")
-    async def get_excursion_full_info(self, excursion_id: int) -> ExcursionFullScheme:
-        logger.debug(
-            "Get full info about excursion with id: {!r}",
-            excursion_id,
-        )
-
-        excursion = await self.get_excursion(excursion_id)
-        details = await self.get_excursion_details(excursion_id)
-        images = await self.get_excursion_images(excursion_id)
-
-        result = ExcursionFullScheme(
-            title=excursion.title,
-            description=excursion.description,
-            date=excursion.date,
-            price=excursion.price,
-            bus_number=excursion.bus_number,
-            people_amount=excursion.people_amount,
-            people_left=excursion.people_left,
-            is_active=excursion.is_active,
-            id=excursion.id,
-        )
-
-        if details:
-            result.details = details
-        if images:
-            result.images = images
-
-        return result
-
-    @invalidate_cache("excursion_details*", "excursion_full*", "excursion_with_details*")
-    async def create_excursion_details(
-        self, excursion_id: int, details: ExcursionDetailsCreateScheme
-    ) -> ExcursionDetailsScheme:
-        logger.debug(
-            (
-                "Create excursion details for excursion with id={id!r}"
-                "and deatils={details!r}"
-            ),
-            id=excursion_id,
-            details=details,
-        )
-
-        await self.get_excursion(excursion_id)
-        old_details = await self.details_repository.find_one(
-            filter=(ExcursionDetailsModel.excursion_id == excursion_id)
-        )
-        if old_details:
-            raise HTTPException(
-                status_code=404, detail="Excursion details already exist"
-            )
-
-        creation_data = {**details.model_dump()}
-        creation_data["excursion_id"] = excursion_id
-
-        new_details = await self.details_repository.add_one(data=creation_data)
-        return new_details.to_read_model()
-
-    @invalidate_cache("excursion_details*", "excursion_full*", "excursion_with_details*")
-    async def update_excursion_details(
-        self, excursion_id: int, details_update: ExcursionDetailsUpdateScheme
-    ) -> ExcursionDetailsScheme:
-        logger.debug(
-            (
-                "Update excursion details for excursion with id={id!r}"
-                "and deatils={details!r}"
-            ),
-            id=excursion_id,
-            details=details_update,
-        )
-
-        await self.get_excursion(excursion_id)
-        details = await self.get_excursion_details(excursion_id=excursion_id)
-
-        updated_details = await self.details_repository.update_one(
-            id=details.id, data=details_update.model_dump()
-        )
-        return updated_details.to_read_model()
-
-    @invalidate_cache("excursion_details*", "excursion_full*", "excursion_with_details*")
-    async def delete_excursion_details(self, excursion_id: int) -> bool:
-        logger.debug(
-            "Delete excursion details for excursion with id: {!r}", excursion_id
-        )
-
-        details = await self.get_excursion_details(excursion_id=excursion_id)
-        await self.details_repository.delete_one(id=details.id)
-        return True
+    def __repr__(self) -> str:
+        return "ExcurionService"

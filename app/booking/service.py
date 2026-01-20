@@ -80,11 +80,11 @@ class BookingService:
         formated_booking = new_booking.to_read_model()
 
         if formated_booking.is_active:
-            await self.excursion_service.add_people_left(
+            await self.excursion_service.change_people_left(
                 get_excursion.id, formated_booking.total_people
             )
         else:
-            await self.excursion_service.add_people_left(
+            await self.excursion_service.change_people_left(
                 get_excursion.id, -formated_booking.total_people
             )
 

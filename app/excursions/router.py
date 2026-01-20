@@ -112,7 +112,7 @@ async def add_people(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
     _: Annotated[UserSchema, Depends(require_superuser)],
 ) -> ExcursionScheme:
-    return await service.add_people_left(
+    return await service.change_people_left(
         excursion_id=excursion_id, count_people=people_count
     )
 
