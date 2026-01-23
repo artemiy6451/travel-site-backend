@@ -35,7 +35,6 @@ class ExcurionService:
             SQLAlchemyRepository(async_session_maker, ExcursionImageModel)
         )
 
-    @cached(ttl=settings.ttl, key_prefix="one_excursion")
     async def get_excursion(self, excursion_id: int) -> ExcursionScheme:
         logger.debug("Get excursion with id: {id!r}", id=excursion_id)
 
@@ -330,13 +329,6 @@ class ExcurionService:
 
         return updated_excursion.to_read_model()
 
-    @invalidate_cache(
-        "excursions*",
-        "excursion*",
-        "excursion_full*",
-        "excursion_details*",
-        "excursion_with_details*",
-    )
     async def change_people_left(
         self, excursion_id: int, count_people: int
     ) -> ExcursionScheme:

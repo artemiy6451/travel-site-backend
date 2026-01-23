@@ -51,6 +51,7 @@ async def send_error(bot: Bot, error_msg: str) -> None:
         await bot.send_message(
             chat_id=settings.telegram_admin_id,
             text=error_msg,
+            parse_mode=ParseMode.MARKDOWN,
         )
     except Exception as e:
         logger.exception("Can not send message: {}", e)
