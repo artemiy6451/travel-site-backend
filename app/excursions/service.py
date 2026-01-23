@@ -312,11 +312,12 @@ class ExcurionService:
         return True
 
     @invalidate_cache(
-        "excursions*",
-        "excursion*",
-        "excursion_full*",
+        "not_active_excursions*",
+        "active_excursions*",
+        "excurion_excursion_images*",
+        "excursions_search*",
         "excursion_details*",
-        "excursion_with_details*",
+        "excursion_full*",
     )
     async def toggle_excursion_activity(self, excursion_id: int) -> ExcursionScheme:
         logger.debug("Toggle excursion activity with id: {!r}", excursion_id)
@@ -329,6 +330,14 @@ class ExcurionService:
 
         return updated_excursion.to_read_model()
 
+    @invalidate_cache(
+        "not_active_excursions*",
+        "active_excursions*",
+        "excurion_excursion_images*",
+        "excursions_search*",
+        "excursion_details*",
+        "excursion_full*",
+    )
     async def change_people_left(
         self, excursion_id: int, count_people: int
     ) -> ExcursionScheme:
@@ -356,11 +365,12 @@ class ExcurionService:
         return updated_excursion.to_read_model()
 
     @invalidate_cache(
-        "excursions*",
-        "excursion*",
-        "excursion_full*",
+        "not_active_excursions*",
+        "active_excursions*",
+        "excurion_excursion_images*",
+        "excursions_search*",
         "excursion_details*",
-        "excursion_with_details*",
+        "excursion_full*",
     )
     async def change_bus_number_crud(
         self, excursion_id: int, bus_number: int
