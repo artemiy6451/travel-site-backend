@@ -36,3 +36,6 @@ class ReviewModel(Base):
             created_at=self.created_at,
             is_active=self.is_active,
         )
+
+    def __repr__(self) -> str:
+        return self.to_read_model().__repr__()

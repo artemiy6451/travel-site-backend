@@ -132,7 +132,6 @@ def _generate_cache_key(func_name: str, prefix: str, args: tuple, kwargs: dict) 
 
     # Создаем хеш для длинных ключей
     key_string = ":".join(key_parts)
-    logger.warning(key_string)
     if len(key_string) > KEY_LEN:
         key_hash = hashlib.md5(key_string.encode()).hexdigest()
         return (
@@ -159,7 +158,3 @@ def _convert_to_serializable(obj: Any) -> Any:  # noqa: PLR0911
         return _convert_to_serializable(obj.__dict__)
     else:
         return str(obj)
-
-
-redis_cache.set("testkey", "testvalue")
-logger.success(redis_cache.get("testkey"))
