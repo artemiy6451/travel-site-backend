@@ -1,6 +1,7 @@
 services:
 
-  backend:
+  travelvv:
+    container_name: travelvv
     restart: always
 
     network_mode: host
@@ -19,7 +20,13 @@ services:
       - ./logs:/app/logs
       - ./static:/app/static
 
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
   telegram-bot:
+    container_name: travelvv-bot
     restart: always
 
     network_mode: host
@@ -35,3 +42,8 @@ services:
     - PYTHONPATH=/app
 
     command: python -m app.telegram.bot
+
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
