@@ -1,8 +1,7 @@
 from fastapi import HTTPException, UploadFile, status
 from loguru import logger
 
-from app.cache import cached, invalidate_cache
-from app.config import settings
+from app.cache import invalidate_cache
 from app.database import async_session_maker
 from app.excursions.files import delete_uploaded_file_by_url, save_uploaded_file
 from app.excursions.models import (
@@ -46,7 +45,6 @@ class ExcurionService:
 
         return excursion.to_read_model()
 
-    @cached(ttl=settings.ttl, key_prefix="active_excursions")
     async def get_active_excursions(
         self,
         offset: int = 0,
@@ -61,7 +59,6 @@ class ExcurionService:
         )
         return [excursion.to_read_model() for excursion in excursions]
 
-    @cached(ttl=settings.ttl, key_prefix="not_active_excursions")
     async def get_not_active_excursions(
         self,
         offset: int = 0,
@@ -77,7 +74,6 @@ class ExcurionService:
         )
         return [excursion.to_read_model() for excursion in excursions]
 
-    @cached(ttl=settings.ttl, key_prefix="excurion_excursion_images")
     async def get_excursion_images(
         self, excursion_id: int
     ) -> list[ExcursionImageSchema]:
@@ -88,7 +84,6 @@ class ExcurionService:
         )
         return [image.to_read_model() for image in images]
 
-    @cached(ttl=settings.ttl, key_prefix="excursion_details")
     async def get_excursion_details(self, excursion_id: int) -> ExcursionDetailsScheme:
         logger.debug(
             "Get excursion details for excursion with id: {!r}",
@@ -103,7 +98,6 @@ class ExcurionService:
 
         return details.to_read_model()
 
-    @cached(ttl=settings.ttl, key_prefix="excursion_full")
     async def get_excursion_full_info(self, excursion_id: int) -> ExcursionFullScheme:
         logger.debug(
             "Get full info about excursion with id: {!r}",
@@ -252,7 +246,6 @@ class ExcurionService:
         )
         return updated_details.to_read_model()
 
-    @cached(ttl=settings.ttl, key_prefix="excursions_search")
     async def search_excursions(self, search_term: str) -> list[ExcursionScheme]:
         logger.debug("Search excursion by serch term: {!r}", search_term)
 

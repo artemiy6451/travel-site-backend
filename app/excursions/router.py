@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from app.auth.depends import require_superuser
 from app.auth.schemas import UserSchema
+from app.cache import cached
+from app.config import settings
 from app.excursions.depends import get_excursion_service
 from app.excursions.schemas import (
     ExcursionCreateScheme,
@@ -21,6 +23,7 @@ excursion_router = APIRouter(tags=["Excursion"])
 
 
 # ===== Public ручки для работы с ExcursionModel =====
+@cached(ttl=settings.ttl, key_prefix="active_excursions")
 @excursion_router.get("/excursions/active", response_model=list[ExcursionScheme])
 async def get_active_excursions(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
@@ -33,6 +36,7 @@ async def get_active_excursions(
     )
 
 
+@cached(ttl=settings.ttl, key_prefix="not_active_excursions")
 @excursion_router.get("/excursions/not_active", response_model=list[ExcursionScheme])
 async def get_not_active_excursions(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
@@ -53,6 +57,7 @@ async def read_excursion(
     return await service.get_excursion(excursion_id=excursion_id)
 
 
+@cached(ttl=settings.ttl, key_prefix="excursions_search")
 @excursion_router.get("/excursions/search/", response_model=list[ExcursionScheme])
 async def search_excursions_by_term(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
@@ -142,6 +147,7 @@ async def add_image(
     return new_image
 
 
+@cached(ttl=settings.ttl, key_prefix="excurion_excursion_images")
 @excursion_router.get("/excursions/{excursion_id}/get_images")
 async def get_excursion_images(
     excursion_id: int,
@@ -161,6 +167,7 @@ async def delete_excursion_image(
 
 
 # ===== Public ручки для работы с ExcursionDetailsModel =====
+@cached(ttl=settings.ttl, key_prefix="excursion_details")
 @excursion_router.get("/excursions/{excursion_id}/details")
 async def get_excursion_details_route(
     excursion_id: int,
@@ -169,6 +176,7 @@ async def get_excursion_details_route(
     return await service.get_excursion_details(excursion_id=excursion_id)
 
 
+@cached(ttl=settings.ttl, key_prefix="excursion_full")
 @excursion_router.get("/excursions/{excursion_id}/full")
 async def get_excursion_full(
     excursion_id: int,
