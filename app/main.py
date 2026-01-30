@@ -72,7 +72,6 @@ app.mount("/static", StaticFiles(directory=settings.upload_dir), name="static")
 @app.get("/health")
 async def health_check() -> dict:
     logger.debug("Health check requested")
-    1 / 0  # noqa: B018
     return {"status": "healthy"}
 
 
