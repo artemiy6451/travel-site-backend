@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "python-template"
+name = "travelvv"
 version = "0.1.0"
-description = "Python template with formater"
+description = "Travel site"
 authors = ["Kazantsev Artem <me@lokach.ru>"]
 readme = "README.md"
 package-mode=false
