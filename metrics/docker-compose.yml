@@ -21,7 +21,7 @@ services:
     volumes:
       # Монтируем директории с логами с хоста
       - /var/log:/var/log:ro  # Системные логи
-      - /home/lokach/code/travel-site-backend/logs:/app_logs:ro  # Логи вашего приложения
+      - ../logs:/app_logs:ro  # Логи вашего приложения
       - /var/lib/docker/containers:/var/lib/docker/containers:ro  # Docker контейнеры
       # Конфигурация
       - ./promtail-config.yaml:/etc/promtail/config.yml

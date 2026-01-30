@@ -1,4 +1,5 @@
 import asyncio
+import locale
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -14,6 +15,7 @@ from app.telegram.commands import routers
 from app.telegram.handlers.send_notification import send_booking, send_error
 from app.telegram.handlers.toggle_booking import toggle_booking_router
 
+locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 setup_new_logger()
 
 bot = Bot(

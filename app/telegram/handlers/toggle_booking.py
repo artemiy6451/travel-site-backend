@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import F, Router
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.types import CallbackQuery
@@ -7,7 +9,7 @@ from app.booking.schemas import BookingSchema
 from app.booking.service import BookingService
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
-from app.telegram.utils import generate_context, get_keyboard
+from app.telegram.utils import get_keyboard
 from app.template_loader import render_template
 
 toggle_booking_router = Router()
@@ -74,7 +76,14 @@ async def toggle_status(
         )
         return
 
-    context = generate_context(booking=booking, excursion=excursion)
+    context = {
+        "booking": booking.model_dump(),
+        "excursion": excursion.model_dump(),
+        "formated_date": excursion.date.strftime("%d %B"),
+        "formated_created_at": booking.created_at.strftime("%d %B %H:%m"),
+        "formated_confirmed_at": datetime.now().strftime("%d %B %H:%m"),
+        "sum": booking.total_people * excursion.price,
+    }
     text = render_template("booking.html", **context)
 
     await callback.message.edit_text(  # type: ignore

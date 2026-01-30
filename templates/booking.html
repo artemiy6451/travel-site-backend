@@ -2,6 +2,10 @@
 ━━━━━━━━━━━━━━━━━━
 <b>ID:</b> {{ booking.id }}
 <b>Создана:</b> {{ formated_created_at }}
+{% if booking.is_active %}
+<b>Подтверждена:</b> {{ formated_confirmed_at }}
+{% else %}
+{% endif %}
 <b>Экскурсия:</b> {{ excursion.title }}
 <b>Дата:</b> {{ formated_date }}
 ━━━━━━━━━━━━━━━━━━
