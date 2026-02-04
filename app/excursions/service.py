@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import HTTPException, UploadFile, status
 from loguru import logger
 
@@ -217,9 +219,16 @@ class ExcurionService:
 
         await self.get_excursion(excursion_id)
 
-        new_excursion = await self.excursion_repository.update_one(
-            id=excursion_id, data=excursion_update.model_dump()
+        where = ExcursionModel.id == excursion_id
+        new_excursion = await self.excursion_repository.update(
+            where=where, data=excursion_update.model_dump()
         )
+        if new_excursion is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find excursion.",
+            )
+
         return new_excursion.to_read_model()
 
     @invalidate_cache(
@@ -241,9 +250,16 @@ class ExcurionService:
         await self.get_excursion(excursion_id)
         details = await self.get_excursion_details(excursion_id=excursion_id)
 
-        updated_details = await self.details_repository.update_one(
-            id=details.id, data=details_update.model_dump()
+        where = ExcursionDetailsModel.id == details.id
+        updated_details = await self.details_repository.update(
+            where=where, data=details_update.model_dump()
         )
+        if updated_details is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find excursion details.",
+            )
+
         return updated_details.to_read_model()
 
     async def search_excursions(self, search_term: str) -> list[ExcursionScheme]:
@@ -317,9 +333,15 @@ class ExcurionService:
 
         excursion = await self.get_excursion(excursion_id)
 
-        updated_excursion = await self.excursion_repository.update_one(
-            id=excursion_id, data={"is_active": not excursion.is_active}
+        where = ExcursionModel.id == excursion_id
+        updated_excursion = await self.excursion_repository.update(
+            where=where, data={"is_active": not excursion.is_active}
         )
+        if updated_excursion is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find excursion.",
+            )
 
         return updated_excursion.to_read_model()
 
@@ -352,9 +374,15 @@ class ExcurionService:
                 detail=f"Can not add {count_people} people, owerflow.",
             )
 
-        updated_excursion = await self.excursion_repository.update_one(
-            id=excursion_id, data={"people_left": left}
+        where = ExcursionModel.id == excursion_id
+        updated_excursion = await self.excursion_repository.update(
+            where=where, data={"people_left": left}
         )
+        if updated_excursion is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find excursion.",
+            )
         return updated_excursion.to_read_model()
 
     @invalidate_cache(
@@ -385,10 +413,26 @@ class ExcurionService:
                 detail="Номер автобуса не может быть отрицательным",
             )
 
-        updated_excursion = await self.excursion_repository.update_one(
-            id=excursion_id, data={"bus_number": bus_number}
+        where = ExcursionModel.id == excursion_id
+        updated_excursion = await self.excursion_repository.update(
+            where=where, data={"bus_number": bus_number}
         )
+        if updated_excursion is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find excursion.",
+            )
+
         return updated_excursion.to_read_model()
+
+    async def deactivate_past_excurions(self) -> bool:
+        where = (ExcursionModel.date < datetime.now()) & (ExcursionModel.is_active)
+        data = {"is_active": False}
+        updated_excursions = await self.excursion_repository.update(
+            where=where, data=data
+        )
+
+        return True if updated_excursions else False
 
     def __repr__(self) -> str:
         return "ExcurionService"

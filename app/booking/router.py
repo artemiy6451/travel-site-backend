@@ -31,7 +31,7 @@ async def get_all_bookings(
     service: Annotated[BookingService, Depends(get_booking_service)],
     _: Annotated[UserSchema, Depends(require_superuser)],
 ) -> list[BookingSchema]:
-    bookings = await service.get_all_bookings(excursion_id)
+    bookings = await service.get_all_active_bookings(excursion_id)
     return bookings
 
 

@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.booking.schemas import BookingSchema
+from app.booking.schemas import BookingSchema, BookingStatus
 from app.models import Base
 
 
@@ -21,9 +21,19 @@ class BookingModel(Base):
 
     total_people: Mapped[int] = mapped_column(nullable=False)
     children: Mapped[int] = mapped_column(nullable=True)
-    is_active: Mapped[bool] = mapped_column(nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.now())
-    confirmed_at: Mapped[datetime] = mapped_column(nullable=True, default=None)
+
+    status: Mapped[BookingStatus] = mapped_column(
+        Enum(BookingStatus), nullable=False, default=BookingStatus.PENDING
+    )
+
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.now)
+    changed_at: Mapped[datetime] = mapped_column(
+        nullable=True,
+        default=datetime.now,
+        onupdate=datetime.now,
+    )
+
+    telegram_user_id: Mapped[int | None] = mapped_column(nullable=True, default=None)
 
     def to_read_model(self) -> BookingSchema:
         return BookingSchema(
@@ -34,7 +44,8 @@ class BookingModel(Base):
             phone_number=self.phone_number,
             total_people=self.total_people,
             children=self.children,
-            is_active=self.is_active,
+            status=self.status,
             created_at=self.created_at,
-            confirmed_at=self.confirmed_at,
+            changed_at=self.changed_at,
+            telegram_user_id=self.telegram_user_id,
         )

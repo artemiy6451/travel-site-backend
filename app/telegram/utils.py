@@ -2,19 +2,23 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
 
-from app.booking.schemas import BookingSchema
+from app.booking.schemas import BookingSchema, BookingStatus
 from app.excursions.schemas import ExcursionScheme
 
 
 def get_keyboard(booking: BookingSchema) -> InlineKeyboardMarkup:
     logger.debug(
-        "Generate keyboard with is_active={} and booking_id={}",
-        booking.is_active,
+        "Generate keyboard with status={} and booking_id={}",
+        booking.status,
         booking.id,
     )
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=f"{'❌ Отменить' if booking.is_active else '✅ Подтвердить'}",
+        text=(
+            "❌ Отменить"
+            if booking.status == BookingStatus.CONFIRMED
+            else "✅ Подтвердить"
+        ),
         callback_data=f"toggle_booking:{booking.id}",
     )
     builder.adjust(1)

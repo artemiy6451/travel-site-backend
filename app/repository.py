@@ -3,6 +3,7 @@ from typing import Any, Generic, Type, TypeVar
 from loguru import logger
 from sqlalchemy import (
     ColumnElement,
+    ColumnExpressionArgument,
     delete,
     insert,
     select,
@@ -107,30 +108,27 @@ class SQLAlchemyRepository(Generic[T]):
 
             return result
 
-    async def update_one(self, id: int, data: dict[str, Any]) -> T:
+    async def update(
+        self, where: ColumnExpressionArgument, data: dict[str, Any]
+    ) -> T | None:
         logger.debug(
             (
-                "Send update request form `update_one` to database"
-                "for model: {}, id: {} and data: {}"
+                "Send update request form `update` to database"
+                "for model: {}, where: {} and data: {}"
             ),
             self.model,
-            id,
+            where,
             data,
         )
 
         async with self.session() as s:
-            stmt = (
-                update(self.model)
-                .values(**data)
-                .where(self.model.id == id)
-                .returning(self.model)
-            )
+            stmt = update(self.model).values(**data).where(where).returning(self.model)
 
             logger.debug("Final statement: {}", stmt)
 
             res = await s.execute(stmt)
             await s.commit()
-            result = res.scalar_one()
+            result = res.scalars().one_or_none()
 
             logger.debug("Returning from `update_one`: {}", result)
 

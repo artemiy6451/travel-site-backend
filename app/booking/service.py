@@ -1,8 +1,9 @@
 import asyncio
-from datetime import datetime
+
+from fastapi import HTTPException
 
 from app.booking.models import BookingModel
-from app.booking.schemas import BookingCreate, BookingSchema
+from app.booking.schemas import BookingCreate, BookingSchema, BookingStatus
 from app.database import async_session_maker
 from app.excursions.models import ExcursionModel
 from app.excursions.schemas import ExcursionScheme
@@ -41,11 +42,13 @@ class BookingService:
         )
         return formated_booking
 
-    async def get_all_bookings(self, excursion_id: int) -> list[BookingSchema]:
+    async def get_all_active_bookings(self, excursion_id: int) -> list[BookingSchema]:
         join_by = ExcursionModel
-        filter_by = (ExcursionModel.id == excursion_id) & (BookingModel.is_active)
+        filter_by = (ExcursionModel.id == excursion_id) & (
+            BookingModel.status == BookingStatus.CONFIRMED
+        )
         bookings = await self.booking_repository.find_all(
-            join_by=join_by, filter_by=filter_by
+            join_by=join_by, filter_by=filter_by, order_by=BookingModel.created_at
         )
         return [booking.to_read_model() for booking in bookings]
 
@@ -69,17 +72,30 @@ class BookingService:
         if get_excursion is None:
             return None
 
-        new_booking = await self.booking_repository.update_one(
-            id=booking_id,
-            data={
-                "is_active": not booking.is_active,
-                "confirmed_at": datetime.now() if not booking.is_active else None,
-            },
+        match booking.status:
+            case BookingStatus.PENDING:
+                new_status = BookingStatus.CONFIRMED
+            case BookingStatus.CONFIRMED:
+                new_status = BookingStatus.CANCELLED
+            case BookingStatus.CANCELLED:
+                new_status = BookingStatus.CONFIRMED
+            case _:
+                new_status = BookingStatus.PENDING
+
+        where = BookingModel.id == booking_id
+        new_booking = await self.booking_repository.update(
+            where=where,
+            data={"status": new_status},
         )
+        if new_booking is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find booking.",
+            )
 
         formated_booking = new_booking.to_read_model()
 
-        if formated_booking.is_active:
+        if formated_booking.status == BookingStatus.CONFIRMED:
             await self.excursion_service.change_people_left(
                 get_excursion.id, formated_booking.total_people
             )

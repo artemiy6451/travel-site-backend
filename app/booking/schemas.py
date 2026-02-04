@@ -1,6 +1,16 @@
+import enum
 from datetime import datetime
 
 from pydantic import BaseModel
+
+
+class BookingStatus(enum.Enum):
+    """Статусы бронирования"""
+
+    PENDING = "pending"  # Ожидает подтверждения
+    CONFIRMED = "confirmed"  # Подтверждена
+    CANCELLED = "cancelled"  # Отменена
+    EXPIRED = "expired"  # Просрочена (не подтвердили вовремя)
 
 
 class BookingCreate(BaseModel):
@@ -8,15 +18,19 @@ class BookingCreate(BaseModel):
     first_name: str
     last_name: str
     phone_number: str
+
     total_people: int
     children: int | None = None
 
 
 class BookingSchema(BookingCreate):
     id: int
-    is_active: bool
+    status: BookingStatus
+
     created_at: datetime
-    confirmed_at: datetime | None
+    changed_at: datetime
+
+    telegram_user_id: int | None
 
     class Config:
         from_attributes = True

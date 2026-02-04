@@ -1,11 +1,9 @@
-from datetime import datetime
-
 from aiogram import F, Router
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.types import CallbackQuery
 from loguru import logger
 
-from app.booking.schemas import BookingSchema
+from app.booking.schemas import BookingSchema, BookingStatus
 from app.booking.service import BookingService
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
@@ -39,7 +37,11 @@ async def handle_toggle_booking(callback: CallbackQuery) -> None:
             await callback.answer("Бронь не найдена!", show_alert=True)
             return
 
-        status = "✅ активирована" if updated_booking.is_active else "❌ отменена"
+        status = (
+            "✅ активирована"
+            if updated_booking.status == BookingStatus.CONFIRMED
+            else "❌ отменена"
+        )
 
         await toggle_status(callback, updated_booking, excursion)
 
@@ -75,13 +77,12 @@ async def toggle_status(
             callback,
         )
         return
-
     context = {
         "booking": booking.model_dump(),
         "excursion": excursion.model_dump(),
         "formated_date": excursion.date.strftime("%d %B"),
-        "formated_created_at": booking.created_at.strftime("%d %B %H:%m"),
-        "formated_confirmed_at": datetime.now().strftime("%d %B %H:%m"),
+        "formated_created_at": booking.created_at.strftime("%d %B %H:%M"),
+        "formated_changed_at": booking.changed_at.strftime("%d %B %H:%M"),
         "sum": booking.total_people * excursion.price,
     }
     text = render_template("booking.html", **context)

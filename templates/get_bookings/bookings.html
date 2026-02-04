@@ -5,5 +5,9 @@
 <b>Общая выручка:</b> {{ total_sum }}
 
 {% for booking in bookings %}
-{{ loop.index }}: <b>{{ booking.last_name }} {{ booking.first_name }}</b>({{ booking.phone_number }}) — {{ booking.total_people }}ч.
+{{ loop.index }}: <b>{{ booking.last_name }} {{ booking.first_name }}</b> ({{ booking.phone_number }})
+    <b>— Взрослых: </b>{{ booking.total_people }}ч.
+{% if booking.children %}
+    <b>— Детских:</b> {{ booking.children }}ч.
+{% endif %}
 {% endfor %}

@@ -51,7 +51,7 @@ async def show_excursion_bookings(callback: CallbackQuery) -> None:
     excurison_service = ExcurionService()
     booking_service = BookingService()
     excursion = await excurison_service.get_excursion(excursion_id)
-    bookings = await booking_service.get_all_bookings(excursion_id=excursion_id)
+    bookings = await booking_service.get_all_active_bookings(excursion_id=excursion_id)
 
     total_people = 0
     total_sum = 0

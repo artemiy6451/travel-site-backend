@@ -2,8 +2,10 @@
 ━━━━━━━━━━━━━━━━━━
 <b>ID:</b> {{ booking.id }}
 <b>Создана:</b> {{ formated_created_at }}
-{% if booking.is_active %}
-<b>Подтверждена:</b> {{ formated_confirmed_at }}
+{% if booking.status.value|lower == "confirmed"|lower %}
+<b>Подтверждена:</b> {{ formated_changed_at }}
+{% elif booking.status.value|lower == "cancelled"|lower %}
+<b>Отменена:</b> {{ formated_changed_at }}
 {% else %}
 {% endif %}
 <b>Экскурсия:</b> {{ excursion.title }}
@@ -11,11 +13,17 @@
 ━━━━━━━━━━━━━━━━━━
 <b>Клиент:</b> {{ booking.last_name }} {{ booking.first_name }}
 <b>Телефон:</b> {{ booking.phone_number }}
-<b>Кол-во гостей:</b> {{ booking.total_people }}
+<b>Кол-во гостей:</b> {{ booking.total_people + booking.children }}
+    <b>— Взрослых: </b>{{ booking.total_people }}ч.
+{% if booking.children %}
+    <b>— Детских:</b> {{ booking.children }}ч.
+{% endif %}
 <b>Сумма:</b> {{ sum }} руб.
 ━━━━━━━━━━━━━━━━━━
-{% if booking.is_active %}
+{% if booking.status.value|lower == "confirmed"|lower %}
 <b>Статус:</b> 🟢 Активна
+{% elif booking.status.value|lower == "cancelled"|lower %}
+<b>Статус:</b> 🔴 Отменена
 {% else %}
-<b>Статус:</b> 🔴 В обработке
+<b>Статус:</b> 🟡 Ожидает подтверждения
 {% endif %}

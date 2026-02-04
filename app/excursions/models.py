@@ -21,7 +21,7 @@ class ExcursionModel(Base):
     price: Mapped[int] = mapped_column(nullable=False)
     people_amount: Mapped[int] = mapped_column(nullable=False)
     people_left: Mapped[int] = mapped_column(nullable=False)
-    is_active: Mapped[bool] = mapped_column(nullable=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=False)
     bus_number: Mapped[int] = mapped_column(nullable=True, default=0)
 
     images: Mapped[list["ExcursionImageModel"]] = relationship(

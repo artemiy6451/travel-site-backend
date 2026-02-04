@@ -60,7 +60,14 @@ class ReviewService:
 
         data = {"is_active": not review.is_active}
 
-        new_review = await self.repository.update_one(id=review_id, data=data)
+        where = ReviewModel.id == review_id
+        new_review = await self.repository.update(where=where, data=data)
+        if new_review is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find review.",
+            )
+
         return new_review.to_read_model()
 
     @invalidate_cache(
