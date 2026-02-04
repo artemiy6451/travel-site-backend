@@ -139,7 +139,7 @@ async def add_image(
     excursion_id: int,
     image_file: Annotated[UploadFile, File(...)],
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
-    # _: Annotated[UserSchema, Depends(require_superuser)],
+    _: Annotated[UserSchema, Depends(require_superuser)],
 ) -> ExcursionImageSchema:
     new_image = await service.add_excurion_image(
         image=image_file, excursion_id=excursion_id
