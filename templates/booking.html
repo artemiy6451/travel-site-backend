@@ -13,7 +13,8 @@
 ━━━━━━━━━━━━━━━━━━
 <b>Клиент:</b> {{ booking.last_name }} {{ booking.first_name }}
 <b>Телефон:</b> {{ booking.phone_number }}
-<b>Кол-во гостей:</b> {{ booking.total_people + booking.children }}
+<b>Кол-во гостей:</b> {{ booking.total_people }} человек{% if booking.children %} и {{ booking.children }} детей{% endif %}
+
     <b>— Взрослых: </b>{{ booking.total_people }}ч.
 {% if booking.children %}
     <b>— Детских:</b> {{ booking.children }}ч.

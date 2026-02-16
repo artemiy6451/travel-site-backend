@@ -1,0 +1,36 @@
+{% set hour = now.hour %}
+{{ ["🌅 Доброе утро", "☀️ Добрый день", "🌇 Добрый вечер", "🌙 Доброй ночи"][hour//6] }}, {{ booking.first_name }}!
+
+<b>🎫 Ваше бронирование #{{ booking.id }}</b>
+
+🏷️ <b>{{ excursion.title }}</b>
+📅 Дата: {{ excursion.date.strftime('%d %B') }} в {{ excursion.date.strftime('%H:%M') }}
+💰 Цена: {{ excursion.price }} руб./чел.
+
+👤 <b>Ваши данные:</b>
+    • {{ booking.last_name }} {{ booking.first_name }}
+    • {{ booking.phone_number }}
+    • {{ booking.total_people }} человек{% if booking.children %} и {{ booking.children }} детей{% endif %}
+
+💵 <b>Итого:</b> {{ booking.total_people * excursion.price }} руб.
+
+{% if booking.status.value|lower == "confirmed"|lower %}
+<b>Статус бронирования:</b> 🟢 Активна
+{% elif booking.status.value|lower == "cancelled"|lower %}
+<b>Статус бронирования:</b> 🔴 Отменена
+{% else %}
+<b>Статус бронирования:</b> 🟡 Ожидает подтверждения
+{% endif %}
+─────────────────
+{% if booking.status.value|lower == "confirmed"|lower %}
+<b>🚀 БРОНИРОВАНИЕ ПОДТВЕРЖДЕНО!</b>
+Ближе к времени отправления я пришлю всю нужную информацию.
+{% elif booking.status.value|lower == "cancelled"|lower %}
+<b>🚀 БРОНИРОВАНИЕ ОТМЕНЕННО!</b>
+Нажмите кнопку ниже, чтобы снова подтвердить.
+{% else %}
+<b>🚀 ПОДТВЕРДИТЕ БРОНИРОВАНИЕ!</b>
+Нажмите кнопку ниже.
+{% endif %}
+
+<i>Вопросы? Пишите: @l0kach</i>
