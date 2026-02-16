@@ -159,11 +159,6 @@ class ExcurionService:
     ) -> ExcursionScheme:
         logger.debug("Create excursion: {!r}", excursion)
 
-        if await self.search_excursions(excursion.title):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Excursion already exist",
-            )
         created_excursion = await self.excursion_repository.add_one(
             excursion.model_dump()
         )
