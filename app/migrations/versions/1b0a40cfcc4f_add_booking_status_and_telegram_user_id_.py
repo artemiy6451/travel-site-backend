@@ -32,6 +32,10 @@ def upgrade() -> None:
             "status", booking_status_enum, nullable=False, server_default="PENDING"
         ),
     )
+
+    op.execute("UPDATE bookings SET status = 'CONFIRMED' WHERE is_active = true")
+    op.execute("UPDATE bookings SET status = 'CANCELLED' WHERE is_active = false")
+
     op.add_column("bookings", sa.Column("telegram_user_id", sa.Integer(), nullable=True))
     op.drop_column("bookings", "is_active")
     # ### end Alembic commands ###
@@ -50,6 +54,11 @@ def downgrade() -> None:
             server_default="False",
         ),
     )
+
+    op.execute("UPDATE bookings SET is_active = true WHERE status = 'CONFIRMED'")
+    op.execute("UPDATE bookings SET is_active = false WHERE status = 'CANCELLED'")
+    op.execute("UPDATE bookings SET is_active = false WHERE status = 'PENDING'")
+
     op.drop_column("bookings", "telegram_user_id")
     op.drop_column("bookings", "status")
     # ### end Alembic commands ###
