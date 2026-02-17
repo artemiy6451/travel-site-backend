@@ -13,12 +13,15 @@ def get_keyboard(booking: BookingSchema, is_user: bool = False) -> InlineKeyboar
         booking.id,
     )
     builder = InlineKeyboardBuilder()
+    match booking.status, is_user:
+        case BookingStatus.CONFIRMED, False:
+            text = "❌ Отменить"
+        case BookingStatus.CONFIRMED, True:
+            text = ""
+        case _:
+            text = "✅ Подтвердить"
     builder.button(
-        text=(
-            "❌ Отменить"
-            if not is_user
-            else "" if booking.status == BookingStatus.CONFIRMED else "✅ Подтвердить"
-        ),
+        text=text,
         callback_data=("user_" if is_user else "") + f"toggle_booking:{booking.id}",
     )
     builder.adjust(1)
