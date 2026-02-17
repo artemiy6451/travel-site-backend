@@ -3,6 +3,7 @@ from aiogram.enums import ParseMode
 from loguru import logger
 
 from app.booking.schemas import BookingSchema
+from app.booking.service import BookingService
 from app.config import settings
 from app.excursions.schemas import ExcursionScheme
 from app.telegram.utils import get_keyboard
@@ -30,15 +31,18 @@ async def send_booking(
     }
     logger.debug("Generate context with len: {} and context: {}", len(context), context)
 
-    text = render_template("booking.html", **context)
+    text = await render_template("booking.html", **context)
 
     try:
-        await bot.send_message(
+        message = await bot.send_message(
             chat_id=settings.telegram_chat_id,
             text=text,
             parse_mode=ParseMode.HTML,
             reply_markup=get_keyboard(booking),
         )
+        booking_service = BookingService()
+        await booking_service.save_telegram_message_id(booking.id, message.message_id)
+
     except Exception as e:
         logger.exception("Can not send message: {}", e)
         raise Exception("Can not send message") from e

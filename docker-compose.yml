@@ -41,7 +41,7 @@ services:
     environment:
     - PYTHONPATH=/app
 
-    command: python -m app.telegram.bot
+    command: python -m app.telegram.main
 
     logging:
       driver: json-file

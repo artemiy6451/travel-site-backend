@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import F, Router
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.types import CallbackQuery
@@ -7,6 +9,10 @@ from app.booking.schemas import BookingSchema, BookingStatus
 from app.booking.service import BookingService
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
+from app.telegram.handlers.change_chat_message import (
+    change_chat_message,
+    send_notification_to_user,
+)
 from app.telegram.utils import get_keyboard
 from app.template_loader import render_template
 
@@ -15,6 +21,52 @@ toggle_booking_router = Router()
 
 @toggle_booking_router.callback_query(F.data.startswith("toggle_booking:"))
 async def handle_toggle_booking(callback: CallbackQuery) -> None:
+    logger.debug("Handle toggle booking with callback: {}", callback)
+
+    booking_service = BookingService()
+    booking_id = 0
+    try:
+        excursion_service = ExcurionService()
+
+        if callback.data is None or callback.message is None:
+            raise Exception
+
+        booking_id = int(callback.data.split(":")[1])
+        booking = await booking_service.get_booking(booking_id)
+        if booking is None:
+            await callback.answer("Бронь не найдена!", show_alert=True)
+            return
+
+        excursion = await excursion_service.get_excursion(booking.excursion_id)
+
+        updated_booking = await booking_service.toggle_booking(booking.id)
+        if updated_booking is None:
+            await callback.answer("Бронь не найдена!", show_alert=True)
+            return
+
+        status = (
+            "✅ активирована"
+            if updated_booking.status == BookingStatus.CONFIRMED
+            else "❌ отменена"
+        )
+
+        await toggle_status(callback, updated_booking, excursion)
+
+        message = f"Бронь #{booking_id} {status}!"
+        await callback.answer(message)
+        if updated_booking.status == BookingStatus.CANCELLED:
+            await send_notification_to_user(updated_booking, excursion)
+
+        logger.debug("Booking toggled: {}", message)
+
+    except Exception as e:
+        logger.exception(f"Ошибка обработки toggle_booking: {e}")
+        await callback.answer("Произошла ошибка!", show_alert=True)
+        updated_booking = await booking_service.toggle_booking(booking_id)
+
+
+@toggle_booking_router.callback_query(F.data.startswith("user_toggle_booking:"))
+async def handle_user_toggle_booking(callback: CallbackQuery) -> None:
     logger.debug("Handle toggle booking with callback: {}", callback)
 
     try:
@@ -47,6 +99,7 @@ async def handle_toggle_booking(callback: CallbackQuery) -> None:
 
         message = f"Бронь #{booking_id} {status}!"
         await callback.answer(message)
+        await change_chat_message(updated_booking, excursion)
 
         logger.debug("Booking toggled: {}", message)
 
@@ -84,11 +137,21 @@ async def toggle_status(
         "formated_created_at": booking.created_at.strftime("%d %B %H:%M"),
         "formated_changed_at": booking.changed_at.strftime("%d %B %H:%M"),
         "sum": booking.total_people * excursion.price,
+        "now": datetime.now(),
     }
-    text = render_template("booking.html", **context)
+
+    if callback.data is None:
+        return
+
+    if callback.data.startswith("user"):
+        text = await render_template("user/confirm_booking.html", **context)
+        is_user = True
+    else:
+        text = await render_template("booking.html", **context)
+        is_user = False
 
     await callback.message.edit_text(  # type: ignore
         text=text,
         parse_mode=ParseMode.HTML,
-        reply_markup=get_keyboard(booking),
+        reply_markup=get_keyboard(booking, is_user=is_user),
     )

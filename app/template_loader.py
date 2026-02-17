@@ -10,10 +10,11 @@ env = Environment(
     autoescape=select_autoescape(["html", "xml"]),
     trim_blocks=True,
     lstrip_blocks=True,
+    enable_async=True,
 )
 
 
-def render_template(template_name: str, **context: Any) -> str:
+async def render_template(template_name: str, **context: Any) -> str:
     """Рендерит шаблон с переданными параметрами"""
     template = env.get_template(template_name)
-    return template.render(**context)
+    return await template.render_async(**context)

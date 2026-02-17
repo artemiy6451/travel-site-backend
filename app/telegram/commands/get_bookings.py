@@ -23,7 +23,7 @@ async def choose_excursion(message: Message) -> None:
 
     keyboard = build_keyborad(excursions)
 
-    text = render_template("get_bookings/hello.html")
+    text = await render_template("get_bookings/hello.html")
 
     await message.answer(text, reply_markup=keyboard)
 
@@ -66,7 +66,7 @@ async def show_excursion_bookings(callback: CallbackQuery) -> None:
         "total_sum": total_sum,
     }
 
-    text = render_template("get_bookings/bookings.html", **context)
+    text = await render_template("get_bookings/bookings.html", **context)
 
     builder = InlineKeyboardBuilder()
     builder.button(text="Закрыть", callback_data="delete")

@@ -14,6 +14,8 @@ class ExcursionBaseScheme(BaseModel):
     bus_number: int = 0
     is_active: bool
 
+    cities: list[str]
+
 
 class ExcursionCreateScheme(ExcursionBaseScheme):
     pass
@@ -28,6 +30,8 @@ class ExcursionUpdateScheme(BaseModel):
     people_left: int | None
     is_active: bool | None
     bus_number: int | None
+
+    cities: list[str]
 
 
 class ItineraryItem(BaseModel):

@@ -24,6 +24,8 @@ class ExcursionModel(Base):
     is_active: Mapped[bool] = mapped_column(nullable=False, default=False)
     bus_number: Mapped[int] = mapped_column(nullable=True, default=0)
 
+    cities: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=[])
+
     images: Mapped[list["ExcursionImageModel"]] = relationship(
         back_populates="excursion",
         cascade="all, delete-orphan",
@@ -49,6 +51,7 @@ class ExcursionModel(Base):
             bus_number=self.bus_number,
             is_active=self.is_active,
             id=self.id,
+            cities=list(self.cities),
         )
 
     def __repr__(self) -> str:

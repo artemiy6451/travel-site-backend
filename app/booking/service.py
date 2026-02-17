@@ -61,7 +61,11 @@ class BookingService:
 
         return booking.to_read_model()
 
-    async def toggle_booking(self, booking_id: int) -> BookingSchema | None:
+    async def toggle_booking(
+        self,
+        booking_id: int,
+        telegram_user_id: int | None = None,
+    ) -> BookingSchema | None:
         booking = await self.get_booking(booking_id=booking_id)
         if booking is None:
             return None
@@ -82,10 +86,15 @@ class BookingService:
             case _:
                 new_status = BookingStatus.PENDING
 
+        data: dict[str, BookingStatus | int] = {"status": new_status}
+
+        if telegram_user_id is not None:
+            data["telegram_user_id"] = telegram_user_id
+
         where = BookingModel.id == booking_id
         new_booking = await self.booking_repository.update(
             where=where,
-            data={"status": new_status},
+            data=data,
         )
         if new_booking is None:
             raise HTTPException(
@@ -103,6 +112,60 @@ class BookingService:
             await self.excursion_service.change_people_left(
                 get_excursion.id, -formated_booking.total_people
             )
+
+        return formated_booking
+
+    async def save_telegram_message_id(
+        self,
+        booking_id: int,
+        telegram_message_id: int,
+    ) -> BookingSchema | None:
+        booking = await self.get_booking(booking_id=booking_id)
+        if booking is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find booking.",
+            )
+
+        where = BookingModel.id == booking_id
+        new_booking = await self.booking_repository.update(
+            where=where,
+            data={"telegram_message_id": telegram_message_id},
+        )
+        if new_booking is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find booking.",
+            )
+
+        formated_booking = new_booking.to_read_model()
+
+        return formated_booking
+
+    async def save_telegram_user_chat_id(
+        self,
+        booking_id: int,
+        telegram_user_chat_id: int,
+    ) -> BookingSchema | None:
+        booking = await self.get_booking(booking_id=booking_id)
+        if booking is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find booking.",
+            )
+
+        where = BookingModel.id == booking_id
+        new_booking = await self.booking_repository.update(
+            where=where,
+            data={"telegram_user_id": telegram_user_chat_id},
+        )
+        if new_booking is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Can not find booking.",
+            )
+
+        formated_booking = new_booking.to_read_model()
 
         return formated_booking
 

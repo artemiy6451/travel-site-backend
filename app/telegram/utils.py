@@ -6,7 +6,7 @@ from app.booking.schemas import BookingSchema, BookingStatus
 from app.excursions.schemas import ExcursionScheme
 
 
-def get_keyboard(booking: BookingSchema) -> InlineKeyboardMarkup:
+def get_keyboard(booking: BookingSchema, is_user: bool = False) -> InlineKeyboardMarkup:
     logger.debug(
         "Generate keyboard with status={} and booking_id={}",
         booking.status,
@@ -16,10 +16,10 @@ def get_keyboard(booking: BookingSchema) -> InlineKeyboardMarkup:
     builder.button(
         text=(
             "❌ Отменить"
-            if booking.status == BookingStatus.CONFIRMED
-            else "✅ Подтвердить"
+            if not is_user
+            else "" if booking.status == BookingStatus.CONFIRMED else "✅ Подтвердить"
         ),
-        callback_data=f"toggle_booking:{booking.id}",
+        callback_data=("user_" if is_user else "") + f"toggle_booking:{booking.id}",
     )
     builder.adjust(1)
     return builder.as_markup()

@@ -22,6 +22,8 @@ class BookingCreate(BaseModel):
     total_people: int
     children: int | None = None
 
+    city: str
+
 
 class BookingSchema(BookingCreate):
     id: int
@@ -31,6 +33,7 @@ class BookingSchema(BookingCreate):
     changed_at: datetime
 
     telegram_user_id: int | None
+    telegram_message_id: int | None
 
     class Config:
         from_attributes = True

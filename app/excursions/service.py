@@ -120,6 +120,7 @@ class ExcurionService:
             people_left=excursion.people_left,
             is_active=excursion.is_active,
             id=excursion.id,
+            cities=excursion.cities,
         )
 
         if details:

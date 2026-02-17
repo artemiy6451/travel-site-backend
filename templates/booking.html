@@ -19,6 +19,7 @@
 {% if booking.children %}
     <b>— Детских:</b> {{ booking.children }}ч.
 {% endif %}
+<b>Город:</b> {{ booking.city }}
 <b>Сумма:</b> {{ sum }} руб.
 ━━━━━━━━━━━━━━━━━━
 {% if booking.status.value|lower == "confirmed"|lower %}

@@ -11,9 +11,7 @@ from app.config import settings
 from app.excursions.schemas import ExcursionScheme
 from app.logging import setup_new_logger
 from app.rabbitmq import rabbit_broker
-from app.telegram.commands import routers
 from app.telegram.handlers.send_notification import send_booking, send_error
-from app.telegram.handlers.toggle_booking import toggle_booking_router
 
 locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 setup_new_logger()
@@ -36,7 +34,9 @@ async def handle_send_booking(data: list[str]) -> None:
         logger.debug("Excursion parsed data: {}", excursion)
 
         await send_booking(bot=bot, booking=booking, excursion=excursion)
-    except Exception:
+
+    except Exception as e:
+        logger.exception("Error while send booking notification: {}", e)
         await asyncio.sleep(60)
         await handle_send_booking(data)
 
@@ -53,20 +53,3 @@ async def handle_send_error(data: list[str]) -> None:
     except Exception:
         await asyncio.sleep(60)
         await handle_send_error(data)
-
-
-for router in routers:
-    dp.include_router(router)
-
-dp.include_router(toggle_booking_router)
-
-
-async def main() -> None:
-    async with rabbit_broker:
-        await rabbit_broker.start()
-        await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
