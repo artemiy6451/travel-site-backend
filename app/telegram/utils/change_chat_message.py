@@ -8,7 +8,7 @@ from app.booking.schemas import BookingSchema
 from app.config import settings
 from app.excursions.schemas import ExcursionScheme
 from app.telegram.bot import bot
-from app.telegram.utils import get_keyboard
+from app.telegram.utils.keyboard import get_keyboard
 from app.template_loader import render_template
 
 

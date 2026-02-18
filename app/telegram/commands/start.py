@@ -7,8 +7,8 @@ from aiogram.types import Message
 
 from app.booking.service import BookingService
 from app.excursions.service import ExcurionService
-from app.telegram.handlers.change_chat_message import change_chat_message
-from app.telegram.utils import get_keyboard
+from app.telegram.utils.change_chat_message import change_chat_message
+from app.telegram.utils.keyboard import get_keyboard
 from app.template_loader import render_template
 
 start_router = Router()

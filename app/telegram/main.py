@@ -3,7 +3,7 @@ import asyncio
 from app.rabbitmq import rabbit_broker
 from app.telegram.bot import bot, dp
 from app.telegram.commands import routers
-from app.telegram.handlers.toggle_booking import toggle_booking_router
+from app.telegram.utils.toggle_booking import toggle_booking_router
 
 for router in routers:
     dp.include_router(router)

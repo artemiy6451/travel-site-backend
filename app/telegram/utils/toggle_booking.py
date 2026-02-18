@@ -9,14 +9,112 @@ from app.booking.schemas import BookingSchema, BookingStatus
 from app.booking.service import BookingService
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcurionService
-from app.telegram.handlers.change_chat_message import (
+from app.telegram.utils.change_chat_message import (
     change_chat_message,
     send_notification_to_user,
 )
-from app.telegram.utils import get_keyboard
+from app.telegram.utils.keyboard import get_keyboard
 from app.template_loader import render_template
 
 toggle_booking_router = Router()
+
+
+async def get_booking_and_excursion(
+    callback: CallbackQuery,
+) -> tuple[BookingSchema, ExcursionScheme]:
+    if callback.data is None or callback.message is None:
+        raise Exception
+
+    booking_service = BookingService()
+    excursion_service = ExcurionService()
+
+    booking_id = int(callback.data.split(":")[1])
+    booking = await booking_service.get_booking(booking_id)
+    if booking is None:
+        await callback.answer("Бронь не найдена!", show_alert=True)
+        raise Exception
+
+    excursion = await excursion_service.get_excursion(booking.excursion_id)
+
+    return booking, excursion
+
+
+@toggle_booking_router.callback_query(F.data.startswith("admin_confirm_booking:"))
+async def admin_confirm(callback: CallbackQuery) -> None:
+    logger.debug("Handle admin confirm booking with callback: {}", callback)
+    booking, excursion = await get_booking_and_excursion(callback)
+    booking_service = BookingService()
+    try:
+        if booking.status == BookingStatus.CONFIRMED:
+            await callback.answer("Бронь уже активированна!")
+            await edit_message(callback, booking, excursion)
+            return
+
+        updated_booking = await booking_service.toggle_booking(booking.id)
+        if updated_booking is None:
+            await callback.answer("Бронь не найдена!", show_alert=True)
+            return
+
+        await edit_message(callback, updated_booking, excursion)
+        await callback.answer(f"Бронь #{booking.id} ✅ активирована!")
+
+    except Exception as e:
+        logger.exception(f"Ошибка обработки admin_confirm: {e}")
+        await callback.answer("Произошла ошибка!", show_alert=True)
+        updated_booking = await booking_service.toggle_booking(booking.id)
+
+
+@toggle_booking_router.callback_query(F.data.startswith("user_confirm_booking:"))
+async def user_confirm(callback: CallbackQuery) -> None:
+    logger.debug("Handle user confirm booking with callback: {}", callback)
+    booking, excursion = await get_booking_and_excursion(callback)
+    booking_service = BookingService()
+    try:
+        if booking.status == BookingStatus.CONFIRMED:
+            await callback.answer("Бронь уже активированна!")
+            await edit_message(callback, booking, excursion)
+            await change_chat_message(booking, excursion)
+            return
+
+        updated_booking = await booking_service.toggle_booking(booking.id)
+        if updated_booking is None:
+            await callback.answer("Бронь не найдена!", show_alert=True)
+            return
+
+        await edit_message(callback, updated_booking, excursion)
+        await callback.answer(f"Бронь #{booking.id} ✅ активирована!")
+        await change_chat_message(booking, excursion)
+
+    except Exception as e:
+        logger.exception(f"Ошибка обработки admin_confirm: {e}")
+        await callback.answer("Произошла ошибка!", show_alert=True)
+        updated_booking = await booking_service.toggle_booking(booking.id)
+
+
+@toggle_booking_router.callback_query(F.data.startswith("admin_cancel_booking:"))
+async def admin_cancel(callback: CallbackQuery) -> None:
+    logger.debug("Handle admin cancel booking with callback: {}", callback)
+    booking, excursion = await get_booking_and_excursion(callback)
+    booking_service = BookingService()
+    try:
+        if booking.status == BookingStatus.CANCELLED:
+            await callback.answer("Бронь уже отменена!")
+            await edit_message(callback, booking, excursion)
+            await send_notification_to_user(booking, excursion)
+            return
+
+        updated_booking = await booking_service.toggle_booking(booking.id)
+        if updated_booking is None:
+            await callback.answer("Бронь не найдена!", show_alert=True)
+            return
+
+        await edit_message(callback, updated_booking, excursion)
+        await callback.answer(f"Бронь #{booking.id} ❌ отменена!")
+        await send_notification_to_user(updated_booking, excursion)
+
+    except Exception as e:
+        logger.exception(f"Ошибка обработки admin_confirm: {e}")
+        await callback.answer("Произошла ошибка!", show_alert=True)
 
 
 @toggle_booking_router.callback_query(F.data.startswith("toggle_booking:"))
@@ -50,7 +148,7 @@ async def handle_toggle_booking(callback: CallbackQuery) -> None:
             else "❌ отменена"
         )
 
-        await toggle_status(callback, updated_booking, excursion)
+        await edit_message(callback, updated_booking, excursion)
 
         message = f"Бронь #{booking_id} {status}!"
         await callback.answer(message)
@@ -95,7 +193,7 @@ async def handle_user_toggle_booking(callback: CallbackQuery) -> None:
             else "❌ отменена"
         )
 
-        await toggle_status(callback, updated_booking, excursion)
+        await edit_message(callback, updated_booking, excursion)
 
         message = f"Бронь #{booking_id} {status}!"
         await callback.answer(message)
@@ -108,7 +206,7 @@ async def handle_user_toggle_booking(callback: CallbackQuery) -> None:
         await callback.answer("Произошла ошибка!", show_alert=True)
 
 
-async def toggle_status(
+async def edit_message(
     callback: CallbackQuery,
     booking: BookingSchema,
     excursion: ExcursionScheme,
