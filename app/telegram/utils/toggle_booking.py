@@ -83,7 +83,7 @@ async def user_confirm(callback: CallbackQuery) -> None:
 
         await edit_message(callback, updated_booking, excursion)
         await callback.answer(f"Бронь #{booking.id} ✅ активирована!")
-        await change_chat_message(booking, excursion)
+        await change_chat_message(updated_booking, excursion)
 
     except Exception as e:
         logger.exception(f"Ошибка обработки admin_confirm: {e}")

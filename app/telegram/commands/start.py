@@ -7,7 +7,6 @@ from aiogram.types import Message
 
 from app.booking.service import BookingService
 from app.excursions.service import ExcurionService
-from app.telegram.utils.change_chat_message import change_chat_message
 from app.telegram.utils.keyboard import get_keyboard
 from app.template_loader import render_template
 
@@ -52,8 +51,6 @@ async def command_start_handler(message: Message) -> None:
 
         booking_service = BookingService()
         await booking_service.save_telegram_user_chat_id(booking.id, message.chat.id)
-
-        await change_chat_message(booking, excursion)
 
     else:
         await message.answer(
