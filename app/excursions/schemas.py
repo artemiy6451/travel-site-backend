@@ -1,10 +1,17 @@
 from datetime import datetime
+from enum import Enum
 from typing import List
 
 from pydantic import BaseModel
 
 
+class ExcursionType(Enum):
+    EXCURSION = "excursion"
+    TOUR = "tour"
+
+
 class ExcursionBaseScheme(BaseModel):
+    type: ExcursionType
     title: str
     description: str
     date: datetime
@@ -22,6 +29,7 @@ class ExcursionCreateScheme(ExcursionBaseScheme):
 
 
 class ExcursionUpdateScheme(BaseModel):
+    type: ExcursionType
     title: str | None
     description: str | None
     date: datetime | None
