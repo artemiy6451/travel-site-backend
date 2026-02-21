@@ -1,12 +1,13 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, TIMESTAMP, ForeignKey, Text
+from sqlalchemy import JSON, TIMESTAMP, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.excursions.schemas import (
     ExcursionDetailsScheme,
     ExcursionImageSchema,
     ExcursionScheme,
+    ExcursionType,
     ItineraryItem,
 )
 from app.models import Base
@@ -14,6 +15,10 @@ from app.models import Base
 
 class ExcursionModel(Base):
     __tablename__ = "excursions"
+
+    type: Mapped[ExcursionType] = mapped_column(
+        Enum(ExcursionType), nullable=False, default=ExcursionType.EXCURSION
+    )
 
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=False)
@@ -52,6 +57,7 @@ class ExcursionModel(Base):
             is_active=self.is_active,
             id=self.id,
             cities=list(self.cities),
+            type=self.type,
         )
 
     def __repr__(self) -> str:

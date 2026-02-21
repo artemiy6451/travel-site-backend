@@ -15,6 +15,7 @@ from app.excursions.schemas import (
     ExcursionFullScheme,
     ExcursionImageSchema,
     ExcursionScheme,
+    ExcursionType,
     ExcursionUpdateScheme,
 )
 from app.excursions.service import ExcurionService
@@ -29,10 +30,12 @@ async def get_active_excursions(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
     skip: int = 0,
     limit: int = 100,
+    excursion_type: ExcursionType = ExcursionType.EXCURSION,
 ) -> list[ExcursionScheme]:
     return await service.get_active_excursions(
         offset=skip,
         limit=limit,
+        excursion_type=excursion_type,
     )
 
 
@@ -40,12 +43,15 @@ async def get_active_excursions(
 @excursion_router.get("/excursions/not_active", response_model=list[ExcursionScheme])
 async def get_not_active_excursions(
     service: Annotated[ExcurionService, Depends(get_excursion_service)],
+    _: Annotated[UserSchema, Depends(require_superuser)],
     skip: int = 0,
     limit: int = 100,
+    excursion_type: ExcursionType = ExcursionType.EXCURSION,
 ) -> list[ExcursionScheme]:
     return await service.get_not_active_excursions(
         offset=skip,
         limit=limit,
+        excursion_type=excursion_type,
     )
 
 

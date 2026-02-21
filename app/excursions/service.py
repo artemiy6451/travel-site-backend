@@ -19,6 +19,7 @@ from app.excursions.schemas import (
     ExcursionFullScheme,
     ExcursionImageSchema,
     ExcursionScheme,
+    ExcursionType,
     ExcursionUpdateScheme,
 )
 from app.repository import SQLAlchemyRepository
@@ -51,11 +52,18 @@ class ExcurionService:
         self,
         offset: int = 0,
         limit: int = 100,
+        excursion_type: ExcursionType = ExcursionType.EXCURSION,
     ) -> list[ExcursionScheme]:
         logger.debug(
-            "Get active excursions with offset={!r} and limit={!r}", offset, limit
+            "Get active excursions with offset={!r}, limit={!r} and excursion_type={!r}",
+            offset,
+            limit,
+            excursion_type,
         )
-        filter_by = ExcursionModel.is_active == True  # noqa: E712
+        filter_by = (ExcursionModel.is_active == True) & (  # noqa: E712
+            ExcursionModel.type == excursion_type
+        )
+
         excursions = await self.excursion_repository.find_all(
             offset=offset, limit=limit, filter_by=filter_by, order_by=ExcursionModel.date
         )
@@ -65,12 +73,19 @@ class ExcurionService:
         self,
         offset: int = 0,
         limit: int = 100,
+        excursion_type: ExcursionType = ExcursionType.EXCURSION,
     ) -> list[ExcursionScheme]:
         logger.debug(
-            "Get not active excursions with offset={!r} and limit={!r}", offset, limit
+            "Get not active excursions with offset={!r},"
+            " limit={!r} and excursion_type={!r}",
+            offset,
+            limit,
+            excursion_type,
         )
 
-        filter_by = ExcursionModel.is_active == False  # noqa: E712
+        filter_by = (ExcursionModel.is_active == True) & (  # noqa: E712
+            ExcursionModel.type == excursion_type
+        )
         excursions = await self.excursion_repository.find_all(
             offset=offset, limit=limit, order_by=ExcursionModel.date, filter_by=filter_by
         )
@@ -111,6 +126,7 @@ class ExcurionService:
         images = await self.get_excursion_images(excursion_id)
 
         result = ExcursionFullScheme(
+            type=excursion.type,
             title=excursion.title,
             description=excursion.description,
             date=excursion.date,
