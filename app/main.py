@@ -12,7 +12,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.auth.router import login_router
 from app.booking.router import booking_router
 from app.config import settings
-from app.cron import deactivate_past_excurions_cron
+from app.cron import cron_manager, deactivate_past_excurions_cron
 from app.excursions.router import excursion_router
 from app.logging import setup_new_logger
 from app.middleware.logging_middleware import LoggingMiddleware
@@ -33,11 +33,12 @@ async def lifespan(_: FastAPI) -> Any:
         logger.error("Redis connection failed", error=str(e))
         sys.exit(1)
 
-    deactivate_past_excurions_cron.next()
+    deactivate_past_excurions_cron()
 
     yield
 
     redis_client.close()
+    cron_manager.stop_all()
     logger.info("Shutting down application...")
 
 

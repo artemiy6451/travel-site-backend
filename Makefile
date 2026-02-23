@@ -27,7 +27,7 @@ run:
 	poetry run python $(SRC)main.py
 
 dev:
-	poetry run python -m app.main
+	poetry run fastapi dev $(SRC)main.py
 
 migrate:
 	PYTHONPATH=. poetry run alembic upgrade head
