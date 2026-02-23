@@ -109,7 +109,9 @@ class SQLAlchemyRepository(Generic[T]):
             return result
 
     async def update(
-        self, where: ColumnExpressionArgument, data: dict[str, Any]
+        self,
+        where: ColumnExpressionArgument,
+        data: dict[str, Any],
     ) -> T | None:
         logger.debug(
             (
@@ -131,6 +133,34 @@ class SQLAlchemyRepository(Generic[T]):
             result = res.scalars().one_or_none()
 
             logger.debug("Returning from `update_one`: {}", result)
+
+            return result
+
+    async def update_all(
+        self,
+        where: ColumnExpressionArgument,
+        data: dict[str, Any],
+    ) -> list[T]:
+        logger.debug(
+            (
+                "Send update request form `update_all` to database"
+                "for model: {}, where: {} and data: {}"
+            ),
+            self.model,
+            where,
+            data,
+        )
+
+        async with self.session() as s:
+            stmt = update(self.model).values(**data).where(where).returning(self.model)
+
+            logger.debug("Final statement: {}", stmt)
+
+            res = await s.execute(stmt)
+            await s.commit()
+            result = [row[0] for row in res.all()]
+
+            logger.debug("Returning from `update_all`: {}", result)
 
             return result
 
