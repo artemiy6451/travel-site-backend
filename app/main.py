@@ -1,7 +1,7 @@
 import locale
 import sys
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,7 +24,7 @@ setup_new_logger()
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> Any:
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     logger.info("Starting application...", mode=settings.mode)
     try:
         redis_client.ping()
