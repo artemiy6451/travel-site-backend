@@ -29,6 +29,9 @@ run:
 dev:
 	poetry run fastapi dev $(SRC)main.py
 
+bot:
+	poetry run python -m app.telegram.main
+
 migrate:
 	PYTHONPATH=. poetry run alembic upgrade head
 
