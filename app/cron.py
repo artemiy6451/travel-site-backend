@@ -3,6 +3,7 @@ from typing import Callable
 import aiocron
 from loguru import logger
 
+from app.booking.service import BookingService
 from app.excursions.service import ExcurionService
 
 
@@ -30,3 +31,8 @@ cron_manager = CronManager()
 def deactivate_past_excurions_cron() -> None:
     service = ExcurionService()
     cron_manager.add_job("0 0 * * *", service.deactivate_past_excurions)
+
+
+def deactivate_past_bookings() -> None:
+    service = BookingService()
+    cron_manager.add_job("15 0 * * *", service.deactivate_past_bookings)

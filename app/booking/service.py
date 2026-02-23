@@ -1,6 +1,8 @@
 import asyncio
+from datetime import datetime
 
 from fastapi import HTTPException
+from loguru import logger
 
 from app.booking.models import BookingModel
 from app.booking.schemas import BookingCreate, BookingSchema, BookingStatus
@@ -168,6 +170,23 @@ class BookingService:
         formated_booking = new_booking.to_read_model()
 
         return formated_booking
+
+    async def deactivate_past_bookings(self) -> None:
+        where = ExcursionModel.date < datetime.now()
+        excursions = await self.excursion_repository.find_all(filter_by=where)
+
+        logger.debug("Found {} excursions to update.", len(excursions))
+
+        for excursion in excursions:
+            where = (BookingModel.excursion_id == excursion.id) & (
+                (BookingModel.status == BookingStatus.CANCELLED)
+                | (BookingModel.status == BookingStatus.CONFIRMED)
+            )
+            data = {"status": BookingStatus.EXPIRED}
+            booking = await self.booking_repository.update_all(where=where, data=data)
+            if booking is None:
+                continue
+            logger.debug("Booking expired={}", len(booking))
 
     async def _send_booking_notification(
         self, booking: BookingSchema, excursion: ExcursionScheme
