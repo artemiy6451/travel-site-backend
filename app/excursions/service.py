@@ -83,7 +83,7 @@ class ExcurionService:
             excursion_type,
         )
 
-        filter_by = (ExcursionModel.is_active == True) & (  # noqa: E712
+        filter_by = (ExcursionModel.is_active == False) & (  # noqa: E712
             ExcursionModel.type == excursion_type
         )
         excursions = await self.excursion_repository.find_all(
