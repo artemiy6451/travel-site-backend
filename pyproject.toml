@@ -53,7 +53,9 @@ include = '\.pyi?$'
 
 [tool.ruff]
 lint.select = ["F", "E", "W", "I", "N", "PL", "C", "B"]
+# lint.select = ["F", "E", "W", "I", "N", "PL", "C", "B", "D"]
 line-length = 89
+# lint.pydocstyle.convention = "google"
 
 [tool.ruff.lint.pep8-naming]
 classmethod-decorators = ["classmethod", "pydantic.field_validator"]

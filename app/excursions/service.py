@@ -3,7 +3,6 @@ from datetime import datetime
 from fastapi import HTTPException, UploadFile, status
 from loguru import logger
 
-from app.cache import invalidate_cache
 from app.database import async_session_maker
 from app.excursions.files import delete_uploaded_file_by_url, save_uploaded_file
 from app.excursions.models import (
@@ -23,9 +22,10 @@ from app.excursions.schemas import (
     ExcursionUpdateScheme,
 )
 from app.repository import SQLAlchemyRepository
+from app.utils.cache import invalidate_cache
 
 
-class ExcurionService:
+class ExcursionService:
     def __init__(self) -> None:
         self.excursion_repository: SQLAlchemyRepository[ExcursionModel] = (
             SQLAlchemyRepository(async_session_maker, ExcursionModel)

@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.booking.service import BookingService
 from app.config import settings
 from app.excursions.schemas import ExcursionScheme
-from app.excursions.service import ExcurionService
+from app.excursions.service import ExcursionService
 from app.telegram.filter import ChatFilter
 from app.template_loader import render_template
 
@@ -18,7 +18,7 @@ get_bookings_router = Router()
 )
 async def choose_excursion(message: Message) -> None:
     await message.delete()
-    excurison_service = ExcurionService()
+    excurison_service = ExcursionService()
     excursions = await excurison_service.get_active_excursions()
 
     keyboard = build_keyborad(excursions)
@@ -48,10 +48,12 @@ async def show_excursion_bookings(callback: CallbackQuery) -> None:
 
     excursion_id = int(callback.data.split("_")[2])
 
-    excurison_service = ExcurionService()
+    excurison_service = ExcursionService()
     booking_service = BookingService()
     excursion = await excurison_service.get_excursion(excursion_id)
-    bookings = await booking_service.get_all_active_bookings(excursion_id=excursion_id)
+    bookings = await booking_service.get_all_confirmed_bookings_for_excursion(
+        excursion_id=excursion_id
+    )
 
     total_people = 0
     total_sum = 0

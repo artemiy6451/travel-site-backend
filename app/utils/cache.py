@@ -8,7 +8,7 @@ from typing import Any, Callable
 from loguru import logger
 from redis import Redis
 
-from app.redis_config import redis_client
+from app.utils.redis_config import redis_client
 
 KEY_LEN = 200
 

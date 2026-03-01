@@ -1,5 +1,5 @@
-from app.excursions.service import ExcurionService
+from app.excursions.service import ExcursionService
 
 
-async def get_excursion_service() -> ExcurionService:
-    return ExcurionService()
+async def get_excursion_service() -> ExcursionService:
+    return ExcursionService()
