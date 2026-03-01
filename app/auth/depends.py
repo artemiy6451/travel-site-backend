@@ -1,3 +1,5 @@
+"""Auth dependencies."""
+
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -13,6 +15,7 @@ security = HTTPBearer()
 
 
 async def get_user_service() -> UserService:
+    """Get user service."""
     logger.debug("Get user service")
     return UserService()
 
@@ -21,6 +24,14 @@ async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> UserSchema:
+    """Get current user.
+
+    Args:
+    credentials: `HTTPAuthorizationCredentials`
+    service: `UserService`
+
+    Return: `UserSchema`
+    """
     try:
         payload = jwt.decode(
             credentials.credentials, settings.secret_key, algorithms=[ALGORITHM]
@@ -63,6 +74,13 @@ async def get_current_user(
 def require_superuser(
     current_user: Annotated[UserSchema, Depends(get_current_user)],
 ) -> UserSchema:
+    """Require superuser.
+
+    Args:
+    current_user: `UserSchema`
+
+    Return: `UserSchema`
+    """
     if not current_user.is_superuser:
         logger.warning("Admin privileges required!")
         raise HTTPException(
