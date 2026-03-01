@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
@@ -69,8 +71,61 @@ async def show_excursion_bookings(callback: CallbackQuery) -> None:
     text = await render_template("get_bookings/bookings.html", **context)
 
     builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Отправить рассылку", callback_data=f"send_newsletter_{excursion.id}"
+    )
     builder.button(text="Закрыть", callback_data="delete")
 
+    await callback.message.edit_text(text, reply_markup=builder.as_markup())  # type: ignore
+
+
+@get_bookings_router.callback_query(F.data.contains("send_newsletter_"))
+async def send_notification(callback: CallbackQuery) -> None:
+    if callback.message is None or callback.data is None:
+        return
+
+    if callback.bot is None:
+        return
+
+    excursion_id = int(callback.data.split("_")[2])
+    booking_service = BookingService()
+    excursion_service = ExcurionService()
+    all_bookings = await booking_service.get_all_active_bookings(
+        excursion_id=excursion_id
+    )
+    bookings = await booking_service.get_bookings_with_telegram_active(excursion_id)
+    excursion = await excursion_service.get_excursion(excursion_id)
+
+    if bookings is None:
+        return
+
+    sended_bookings = []
+
+    for booking in bookings:
+        try:
+            context = {
+                "excursion": excursion.model_dump(),
+                "booking": booking.model_dump(),
+                "now": datetime.now(),
+            }
+
+            text = await render_template("notification/remainder.html", **context)
+            message = await callback.bot.send_message(booking.telegram_user_id, text)  # type: ignore
+            if message is not None:
+                sended_bookings.append(booking)
+        except Exception:
+            continue
+
+    need_to_send_bookings = [
+        booking for booking in all_bookings if booking not in sended_bookings
+    ]
+    text = await render_template(
+        "notification/sended_bookings.html",
+        bookings=sended_bookings,
+        need_to_send_bookings=need_to_send_bookings,
+    )
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Закрыть", callback_data="delete")
     await callback.message.edit_text(text, reply_markup=builder.as_markup())  # type: ignore
 
 
