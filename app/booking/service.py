@@ -221,11 +221,11 @@ class BookingService:
         Return: `None`
         """
         if booking.status == BookingStatus.CONFIRMED:
-            excursion = await self.excursion_service.change_people_left(
+            excursion = await self.excursion_service.change_people_left_count(
                 excursion.id, booking.total_people
             )
         else:
-            excursion = await self.excursion_service.change_people_left(
+            excursion = await self.excursion_service.change_people_left_count(
                 excursion.id, -booking.total_people
             )
 

@@ -47,7 +47,9 @@ async def get_all_bookings(
     "/booking/{id}/toggle",
     response_model=BookingSchema,
     status_code=status.HTTP_200_OK,
-    responses={404: {}},
+    responses={
+        404: {"detail": "Booking not found"},
+    },
 )
 async def booking_toggle(
     id: int,
