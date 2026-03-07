@@ -1,38 +1,47 @@
+"""File with booking service."""
+
 import asyncio
 from datetime import datetime
+from typing import Any
 
-from fastapi import HTTPException
 from loguru import logger
 
+from app.booking.exceptions import BookingNotFoundError
 from app.booking.models import BookingModel
 from app.booking.schemas import BookingCreate, BookingSchema, BookingStatus
+from app.booking.utils import change_bookings_status
 from app.database import async_session_maker
 from app.excursions.models import ExcursionModel
 from app.excursions.schemas import ExcursionScheme
-from app.excursions.service import ExcurionService
-from app.notifications import Notifications
-from app.rabbitmq import rabbit_broker
+from app.excursions.service import ExcursionService
 from app.repository import SQLAlchemyRepository
+from app.utils.notifications import Notifications
+from app.utils.rabbitmq import rabbit_broker
 
 
 class BookingService:
+    """Service for booking models."""
+
     def __init__(self) -> None:
+        """Create `booking` and `excursion` repository and `excursion` service."""
         self.booking_repository: SQLAlchemyRepository[BookingModel] = (
             SQLAlchemyRepository(async_session_maker, BookingModel)
         )
         self.excursion_repository: SQLAlchemyRepository[ExcursionModel] = (
             SQLAlchemyRepository(async_session_maker, ExcursionModel)
         )
-        self.excursion_service: ExcurionService = ExcurionService()
+        self.excursion_service: ExcursionService = ExcursionService()
 
-    async def create_booking(self, booking: BookingCreate) -> BookingSchema | None:
-        get_excursion = await self.excursion_repository.find_one(
-            ExcursionModel.id == booking.excursion_id
-        )
-        if get_excursion is None:
-            return None
+    async def create_booking(self, booking: BookingCreate) -> BookingSchema:
+        """Create a new booking.
 
-        excursion = get_excursion.to_read_model()
+        Args:
+            booking: `BookingCreate`
+
+        Return:
+        `BookingSchema`
+        """
+        excursion = await self.excursion_service.get_excursion(booking.excursion_id)
 
         new_booking = await self.booking_repository.add_one(booking.model_dump())
         formated_booking = new_booking.to_read_model()
@@ -44,76 +53,83 @@ class BookingService:
         )
         return formated_booking
 
-    async def get_all_active_bookings(self, excursion_id: int) -> list[BookingSchema]:
+    async def get_all_confirmed_bookings_for_excursion(
+        self, excursion_id: int
+    ) -> list[BookingSchema]:
+        """Get all bookings with status CONFIRMED for one excursion.
+
+        Args:
+            excursion_id: `int`
+
+        Return: `list[BookingSchema]`
+        """
         join_by = ExcursionModel
         filter_by = (ExcursionModel.id == excursion_id) & (
             BookingModel.status == BookingStatus.CONFIRMED
         )
         bookings = await self.booking_repository.find_all(
-            join_by=join_by, filter_by=filter_by, order_by=BookingModel.created_at
+            join_by=join_by,
+            filter_by=filter_by,
+            order_by=BookingModel.created_at,
         )
         return [booking.to_read_model() for booking in bookings]
 
-    async def get_booking(self, booking_id: int) -> BookingSchema | None:
+    async def get_booking(self, booking_id: int) -> BookingSchema:
+        """Get booking by id.
+
+        Args:
+            booking_id: `int`
+
+        Return: `BookingSchema`
+
+        Raise: `BookingNotFoundError` if booking does not exist
+        """
         booking = await self.booking_repository.find_one(
             filter=BookingModel.id == booking_id
         )
         if booking is None:
-            return None
+            raise BookingNotFoundError()
 
         return booking.to_read_model()
 
-    async def toggle_booking(
+    async def toggle_booking_status(
         self,
         booking_id: int,
         telegram_user_id: int | None = None,
-    ) -> BookingSchema | None:
+    ) -> BookingSchema:
+        """Toggle booking status.
+
+        Args:
+            booking_id: `int`
+            telegram_user_id: `int | None` default None
+
+        Return: `BookingSchema`
+
+        Raise: `BookingNotFoundError` if booking does not exist
+        """
         booking = await self.get_booking(booking_id=booking_id)
-        if booking is None:
-            return None
 
-        get_excursion = await self.excursion_repository.find_one(
-            ExcursionModel.id == booking.excursion_id
-        )
-        if get_excursion is None:
-            return None
+        excursion = await self.excursion_service.get_excursion(booking.excursion_id)
 
-        match booking.status:
-            case BookingStatus.PENDING:
-                new_status = BookingStatus.CONFIRMED
-            case BookingStatus.CONFIRMED:
-                new_status = BookingStatus.CANCELLED
-            case BookingStatus.CANCELLED:
-                new_status = BookingStatus.CONFIRMED
-            case _:
-                new_status = BookingStatus.PENDING
+        new_status = change_bookings_status(booking)
 
-        data: dict[str, BookingStatus | int] = {"status": new_status}
-
+        data: dict[str, Any] = {"status": new_status}
         if telegram_user_id is not None:
             data["telegram_user_id"] = telegram_user_id
 
-        where = BookingModel.id == booking_id
         new_booking = await self.booking_repository.update(
-            where=where,
+            where=BookingModel.id == booking_id,
             data=data,
         )
         if new_booking is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Can not find booking.",
-            )
+            raise BookingNotFoundError()
 
         formated_booking = new_booking.to_read_model()
 
-        if formated_booking.status == BookingStatus.CONFIRMED:
-            await self.excursion_service.change_people_left(
-                get_excursion.id, formated_booking.total_people
-            )
-        else:
-            await self.excursion_service.change_people_left(
-                get_excursion.id, -formated_booking.total_people
-            )
+        await self._change_people_left_by_booking_status(
+            booking=formated_booking,
+            excursion=excursion,
+        )
 
         return formated_booking
 
@@ -121,60 +137,64 @@ class BookingService:
         self,
         booking_id: int,
         telegram_message_id: int,
-    ) -> BookingSchema | None:
-        booking = await self.get_booking(booking_id=booking_id)
-        if booking is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Can not find booking.",
-            )
+    ) -> BookingSchema:
+        """Save telegram message id.
 
-        where = BookingModel.id == booking_id
+        Args:
+            booking_id: `int`
+            telegram_message_id: `int`
+
+        Return: `BookingSchema`
+
+        Raise: `BookingNotFoundError` if booking does not exist
+        """
+        await self.get_booking(booking_id=booking_id)
+
         new_booking = await self.booking_repository.update(
-            where=where,
+            where=BookingModel.id == booking_id,
             data={"telegram_message_id": telegram_message_id},
         )
         if new_booking is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Can not find booking.",
-            )
+            raise BookingNotFoundError()
 
-        formated_booking = new_booking.to_read_model()
-
-        return formated_booking
+        return new_booking.to_read_model()
 
     async def save_telegram_user_chat_id(
         self,
         booking_id: int,
         telegram_user_chat_id: int,
-    ) -> BookingSchema | None:
-        booking = await self.get_booking(booking_id=booking_id)
-        if booking is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Can not find booking.",
-            )
+    ) -> BookingSchema:
+        """Save telegram user chat id.
 
-        where = BookingModel.id == booking_id
+        Args:
+            booking_id: `int`
+            telegram_user_chat_id: `int`
+
+        Return: `BookingSchema`
+
+        Raise: `BookingNotFoundError` if booking does not exist
+        """
+        await self.get_booking(booking_id=booking_id)
+
         new_booking = await self.booking_repository.update(
-            where=where,
+            where=BookingModel.id == booking_id,
             data={"telegram_user_id": telegram_user_chat_id},
         )
         if new_booking is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Can not find booking.",
-            )
+            raise BookingNotFoundError()
 
-        formated_booking = new_booking.to_read_model()
-
-        return formated_booking
+        return new_booking.to_read_model()
 
     async def deactivate_past_bookings(self) -> None:
-        where = ExcursionModel.date < datetime.now()
-        excursions = await self.excursion_repository.find_all(filter_by=where)
+        """Deactivate past bookings.
 
+        Deactivate all bookings with status CANCELLED or CONFIRMED.
+
+        Return: `None`
+        """
+        excursions = await self.excursion_repository.find_all(
+            filter_by=ExcursionModel.date < datetime.now()
+        )
         logger.debug("Found {} excursions to update.", len(excursions))
 
         for excursion in excursions:
@@ -182,15 +202,48 @@ class BookingService:
                 (BookingModel.status == BookingStatus.CANCELLED)
                 | (BookingModel.status == BookingStatus.CONFIRMED)
             )
-            data = {"status": BookingStatus.EXPIRED}
-            booking = await self.booking_repository.update_all(where=where, data=data)
-            if booking is None:
-                continue
-            logger.debug("Booking expired={}", len(booking))
+            bookings = await self.booking_repository.update_all(
+                where=where, data={"status": BookingStatus.EXPIRED}
+            )
+            logger.debug("Booking expired={}", len(bookings))
+
+    async def _change_people_left_by_booking_status(
+        self,
+        booking: BookingSchema,
+        excursion: ExcursionScheme,
+    ) -> None:
+        """Change people left by booking status.
+
+        Args:
+            booking: `BookingSchema`
+            excursion: `ExcursionScheme`
+
+        Return: `None`
+        """
+        if booking.status == BookingStatus.CONFIRMED:
+            excursion = await self.excursion_service.change_people_left_count(
+                excursion.id, booking.total_people
+            )
+        else:
+            excursion = await self.excursion_service.change_people_left_count(
+                excursion.id, -booking.total_people
+            )
 
     async def _send_booking_notification(
-        self, booking: BookingSchema, excursion: ExcursionScheme
+        self,
+        booking: BookingSchema,
+        excursion: ExcursionScheme,
     ) -> None:
+        """Send booking notification.
+
+        Send booking notification to rabbitmq queue `bookings`.
+
+        Args:
+            booking: `BookingSchema`
+            excursion: `ExcursionScheme`
+
+        Return: `None`
+        """
         async with Notifications(broker=rabbit_broker, queue="bookings") as ns:
             await ns.send_to_rabbit(
                 [

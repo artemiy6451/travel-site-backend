@@ -12,16 +12,16 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.auth.router import login_router
 from app.booking.router import booking_router
 from app.config import settings
-from app.cron import (
+from app.excursions.router import excursion_router
+from app.middleware.logging_middleware import LoggingMiddleware
+from app.reviews.router import reviews_router
+from app.utils.cron import (
     cron_manager,
     deactivate_past_bookings,
     deactivate_past_excurions_cron,
 )
-from app.excursions.router import excursion_router
-from app.logging import setup_new_logger
-from app.middleware.logging_middleware import LoggingMiddleware
-from app.redis_config import redis_client
-from app.reviews.router import reviews_router
+from app.utils.logging import setup_new_logger
+from app.utils.redis_config import redis_client
 
 locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 setup_new_logger()

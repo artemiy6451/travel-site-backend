@@ -1,3 +1,5 @@
+"""File with functions for working with files."""
+
 import uuid
 from datetime import datetime
 from io import BytesIO
@@ -27,6 +29,15 @@ MAX_HEIGHT = 1080
 
 
 def compress_image(image_content: bytes, file_extension: str) -> bytes:
+    """Compress image.
+
+    Args:
+        image_content: `bytes`
+        file_extension: `str`
+
+    Returns:
+        `bytes`
+    """
     logger.debug("Compress image with file extension: {}", file_extension)
 
     try:
@@ -90,6 +101,15 @@ def compress_image(image_content: bytes, file_extension: str) -> bytes:
 
 
 def should_compress_file(file_extension: str, file_size: int) -> bool:
+    """Check should compress file.
+
+    Args:
+        file_extension: `str`
+        file_size: `int`
+
+    Returns:
+        `bool`
+    """
     logger.debug("Check should compress file.")
 
     # Не сжимаем очень маленькие файлы
@@ -102,6 +122,14 @@ def should_compress_file(file_extension: str, file_size: int) -> bool:
 
 
 def save_uploaded_file(file: UploadFile) -> str:
+    """Save uploaded file.
+
+    Args:
+        file: `UploadFile`
+
+    Returns:
+        `str`
+    """
     logger.debug("Save uploaded file: {}", file)
 
     try:
@@ -169,6 +197,14 @@ def save_uploaded_file(file: UploadFile) -> str:
 
 
 def delete_uploaded_file_by_url(file_url: str) -> bool:
+    """Delete uploaded file by url.
+
+    Args:
+        file_url: `str`
+
+    Returns:
+        `bool`
+    """
     logger.debug("Delete image by url: {}", file_url)
 
     try:
@@ -201,6 +237,14 @@ def delete_uploaded_file_by_url(file_url: str) -> bool:
 
 
 def extract_filename_from_url(file_url: str) -> str | None:
+    """Extract filename from url.
+
+    Args:
+        file_url: `str`
+
+    Returns:
+        `str`
+    """
     logger.debug("Extract filename form url: {}", file_url)
 
     try:
