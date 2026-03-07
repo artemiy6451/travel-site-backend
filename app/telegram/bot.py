@@ -9,9 +9,9 @@ from loguru import logger
 from app.booking.schemas import BookingSchema
 from app.config import settings
 from app.excursions.schemas import ExcursionScheme
-from app.logging import setup_new_logger
-from app.rabbitmq import rabbit_broker
 from app.telegram.utils.send_notification import send_booking, send_error
+from app.utils.logging import setup_new_logger
+from app.utils.rabbitmq import rabbit_broker
 
 locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 setup_new_logger()

@@ -3,12 +3,12 @@ import statistics
 from fastapi import HTTPException
 from sqlalchemy import and_
 
-from app.cache import cached, invalidate_cache
 from app.config import settings
 from app.database import async_session_maker
 from app.repository import SQLAlchemyRepository
 from app.reviews.models import ReviewModel
 from app.reviews.schemas import ReviewCreate, ReviewSchema
+from app.utils.cache import cached, invalidate_cache
 
 
 class ReviewService:

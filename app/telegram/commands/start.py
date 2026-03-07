@@ -6,9 +6,9 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from app.booking.service import BookingService
-from app.excursions.service import ExcurionService
+from app.excursions.service import ExcursionService
 from app.telegram.utils.keyboard import get_keyboard
-from app.template_loader import render_template
+from app.utils.template_loader import render_template
 
 start_router = Router()
 
@@ -24,7 +24,7 @@ async def command_start_handler(message: Message) -> None:
         booking_id = int(command_args[1].replace("confirm_", ""))
 
         booking_service = BookingService()
-        excursion_service = ExcurionService()
+        excursion_service = ExcursionService()
 
         booking = await booking_service.get_booking(booking_id)
 

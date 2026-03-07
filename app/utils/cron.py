@@ -4,7 +4,7 @@ import aiocron
 from loguru import logger
 
 from app.booking.service import BookingService
-from app.excursions.service import ExcurionService
+from app.excursions.service import ExcursionService
 
 
 class CronManager:
@@ -29,7 +29,7 @@ cron_manager = CronManager()
 
 
 def deactivate_past_excurions_cron() -> None:
-    service = ExcurionService()
+    service = ExcursionService()
     cron_manager.add_job("0 0 * * *", service.deactivate_past_excurions)
 
 

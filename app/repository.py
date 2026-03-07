@@ -164,7 +164,7 @@ class SQLAlchemyRepository(Generic[T]):
 
             return result
 
-    async def delete_one(self, id: int) -> int:
+    async def delete_one(self, id: int) -> int | None:
         logger.debug(
             "Send delete request form `delete_one` to database for model: {} and id: {}",
             self.model,
@@ -175,7 +175,7 @@ class SQLAlchemyRepository(Generic[T]):
             logger.debug("Final statement: {}", stmt)
             res = await s.execute(stmt)
             await s.commit()
-            result = res.scalar_one()
+            result = res.scalar_one_or_none()
 
             logger.debug("Returning from `delete_one`: {}", result)
 

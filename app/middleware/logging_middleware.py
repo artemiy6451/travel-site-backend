@@ -8,8 +8,8 @@ from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.notifications import Notifications
-from app.rabbitmq import rabbit_broker
+from app.utils.notifications import Notifications
+from app.utils.rabbitmq import rabbit_broker
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):

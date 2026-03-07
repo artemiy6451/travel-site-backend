@@ -1,3 +1,5 @@
+"""File with booking models."""
+
 from datetime import datetime
 
 from sqlalchemy import BigInteger, Enum, ForeignKey
@@ -8,6 +10,23 @@ from app.models import Base
 
 
 class BookingModel(Base):
+    """Booking model.
+
+    Attributes:
+        excursion_id: `int`
+        first_name: `str`
+        last_name: `str`
+        phone_number: `str`
+        total_people: `int`
+        children: `int`
+        status: `BookingStatus`
+        city: `str`
+        created_at: `datetime`
+        changed_at: `datetime`
+        telegram_user_id: `int`
+        telegram_message_id: `int`
+    """
+
     __tablename__ = "bookings"
 
     excursion_id: Mapped[int] = mapped_column(
@@ -43,6 +62,10 @@ class BookingModel(Base):
     )
 
     def to_read_model(self) -> BookingSchema:
+        """Convert booking model to pydantic schema.
+
+        Return: `BookingSchema`
+        """
         return BookingSchema(
             id=self.id,
             excursion_id=self.excursion_id,

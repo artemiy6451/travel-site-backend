@@ -1,3 +1,5 @@
+"""File with auth service."""
+
 import datetime
 from typing import Optional
 
@@ -18,13 +20,23 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UserService:
+    """User service."""
+
     def __init__(self) -> None:
+        """Create user repository."""
         self.repository: SQLAlchemyRepository[UserModel] = SQLAlchemyRepository(
             async_session_maker, UserModel
         )
         logger.debug("Setup UserService with repository: {}", self.repository)
 
     async def get_user_by_email(self, email: str) -> UserModel | None:
+        """Get user by email.
+
+        Args:
+            email: `str`
+
+        Return: `UserModel | None`
+        """
         logger.debug("Find user by email: {}", email)
         filter = UserModel.email == email
         user = await self.repository.find_one(filter=filter)
@@ -32,6 +44,13 @@ class UserService:
         return user if user else None
 
     async def create_user(self, user: UserCreate) -> UserSchema:
+        """Create user.
+
+        Args:
+            user: `UserCreate`
+
+        Return: `UserSchema`
+        """
         logger.debug("Create user with data: {!r}", user)
 
         exist_user = await self.get_user_by_email(user.email)
@@ -51,6 +70,14 @@ class UserService:
         return created_user.to_read_model()
 
     async def authenticate_user(self, email: str, password: str) -> UserSchema:
+        """Authentificate user.
+
+        Args:
+            email: `str`
+            password: `str`
+
+        Return: `UserSchema`
+        """
         logger.debug(
             "Authentificate user with email={email!r} and password={password!r}",
             email=email,
@@ -87,6 +114,13 @@ class UserService:
         return user_schema
 
     def check_admin_user(self, user: UserSchema) -> bool:
+        """Check admin access for user.
+
+        Args:
+            user: `UserSchema`
+
+        Return: `bool`
+        """
         logger.debug(
             "Check admin access for user: {user!r}",
             user=user,
@@ -103,6 +137,13 @@ class UserService:
         return True
 
     def get_token(self, user: UserSchema) -> Token:
+        """Get token for user.
+
+        Args:
+            user: `UserSchema`
+
+        Return: `Token`
+        """
         logger.debug(
             "Get token for user: {user!r}",
             user=user,
@@ -126,16 +167,19 @@ class UserService:
 
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
+        """Verify password."""
         return pwd_context.verify(plain_password, hashed_password)
 
     @staticmethod
     def get_password_hash(password: str) -> str:
+        """Get password hash."""
         return pwd_context.hash(password)
 
     @staticmethod
     def create_access_token(
         data: dict, expires_delta: Optional[datetime.timedelta] = None
     ) -> str:
+        """Create access token."""
         to_encode = data.copy()
         if expires_delta:
             expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
@@ -151,6 +195,7 @@ class UserService:
 
     @staticmethod
     def verify_token(token: str) -> str:
+        """Verify token."""
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
