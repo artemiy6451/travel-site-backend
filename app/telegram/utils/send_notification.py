@@ -7,7 +7,7 @@ from app.booking.service import BookingService
 from app.config import settings
 from app.excursions.schemas import ExcursionScheme
 from app.telegram.utils.keyboard import get_keyboard
-from app.template_loader import render_template
+from app.utils.template_loader import render_template
 
 
 async def send_booking(
