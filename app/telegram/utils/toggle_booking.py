@@ -14,7 +14,7 @@ from app.telegram.utils.change_chat_message import (
     send_notification_to_user,
 )
 from app.telegram.utils.keyboard import get_keyboard
-from app.template_loader import render_template
+from app.utils.template_loader import render_template
 
 toggle_booking_router = Router()
 

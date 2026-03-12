@@ -9,7 +9,7 @@ from app.excursions.schemas import ExcursionScheme
 from app.telegram.bot import bot
 from app.telegram.utils.keyboard import get_keyboard
 from app.telegram.utils.retry import retry
-from app.template_loader import render_template
+from app.utils.template_loader import render_template
 
 
 @retry(max_attempts=10, delay=60)

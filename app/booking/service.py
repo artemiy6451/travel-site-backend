@@ -74,6 +74,17 @@ class BookingService:
         )
         return [booking.to_read_model() for booking in bookings]
 
+    async def get_bookings_with_telegram_active(
+        self, excursion_id: int
+    ) -> list[BookingSchema]:
+        bookings = await self.booking_repository.find_all(
+            filter_by=(
+                BookingModel.telegram_user_id.is_not(None)
+                & (BookingModel.excursion_id == excursion_id)
+            )
+        )
+        return [booking.to_read_model() for booking in bookings]
+
     async def get_booking(self, booking_id: int) -> BookingSchema:
         """Get booking by id.
 

@@ -1,0 +1,11 @@
+Сообщения отправлены:
+{% for booking in bookings %}
+    <b>{{ booking.last_name }} {{ booking.first_name }}</b> ({{ booking.phone_number }})
+{% endfor %}
+
+{% if need_to_send_bookings %}
+Нужно отправить сообщения:
+{% for booking in need_to_send_bookings %}
+    <b>{{ booking.last_name }} {{ booking.first_name }}</b> ({{ booking.phone_number }})
+{% endfor %}
+{% endif %}
