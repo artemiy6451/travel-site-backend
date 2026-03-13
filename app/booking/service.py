@@ -81,6 +81,7 @@ class BookingService:
             filter_by=(
                 BookingModel.telegram_user_id.is_not(None)
                 & (BookingModel.excursion_id == excursion_id)
+                & (BookingModel.status == BookingStatus.CONFIRMED)
             )
         )
         return [booking.to_read_model() for booking in bookings]
