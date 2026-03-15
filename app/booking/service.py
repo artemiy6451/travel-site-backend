@@ -1,7 +1,6 @@
 """File with booking service."""
 
 import asyncio
-from datetime import datetime
 from typing import Any
 
 from loguru import logger
@@ -11,7 +10,6 @@ from app.booking.models import BookingModel
 from app.booking.schemas import BookingCreate, BookingSchema, BookingStatus
 from app.booking.utils import change_bookings_status
 from app.database import async_session_maker
-from app.excursions.models import ExcursionModel
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcursionService
 from app.repository import SQLAlchemyRepository
@@ -23,12 +21,9 @@ class BookingService:
     """Service for booking models."""
 
     def __init__(self) -> None:
-        """Create `booking` and `excursion` repository and `excursion` service."""
+        """Create `booking` and `excursion` service."""
         self.booking_repository: SQLAlchemyRepository[BookingModel] = (
             SQLAlchemyRepository(async_session_maker, BookingModel)
-        )
-        self.excursion_repository: SQLAlchemyRepository[ExcursionModel] = (
-            SQLAlchemyRepository(async_session_maker, ExcursionModel)
         )
         self.excursion_service: ExcursionService = ExcursionService()
 
@@ -63,12 +58,10 @@ class BookingService:
 
         Return: `list[BookingSchema]`
         """
-        join_by = ExcursionModel
-        filter_by = (ExcursionModel.id == excursion_id) & (
-            BookingModel.status == BookingStatus.CONFIRMED
+        filter_by = (BookingModel.status == BookingStatus.CONFIRMED) & (
+            BookingModel.excursion_id == excursion_id
         )
         bookings = await self.booking_repository.find_all(
-            join_by=join_by,
             filter_by=filter_by,
             order_by=BookingModel.created_at,
         )
@@ -204,9 +197,8 @@ class BookingService:
 
         Return: `None`
         """
-        excursions = await self.excursion_repository.find_all(
-            filter_by=ExcursionModel.date < datetime.now()
-        )
+        logger.info("Deactivate past bookings")
+        excursions = await self.excursion_service.get_excursions_with_expired_date()
         logger.debug("Found {} excursions to update.", len(excursions))
 
         for excursion in excursions:

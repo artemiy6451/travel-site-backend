@@ -12,7 +12,9 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.auth.router import login_router
 from app.booking.router import booking_router
 from app.config import settings
+from app.details.router import details_router
 from app.excursions.router import excursion_router
+from app.images.router import image_router
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.reviews.router import reviews_router
 from app.utils.cron import (
@@ -70,8 +72,10 @@ app.add_middleware(
 logger.info("Setting up routes...")
 app.include_router(login_router)
 app.include_router(excursion_router)
-app.include_router(reviews_router)
+app.include_router(details_router)
+app.include_router(image_router)
 app.include_router(booking_router)
+app.include_router(reviews_router)
 logger.success("Routes setup complete")
 
 

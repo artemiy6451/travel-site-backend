@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.auth.models import UserModel  # noqa: F401
 from app.booking.models import BookingModel  # noqa: F401
 from app.config import settings
-from app.excursions.models import ExcursionDetailsModel, ExcursionModel  # noqa: F401
+from app.details.models import DetailsModel  # noqa: F401
+from app.excursions.models import ExcursionModel  # noqa: F401
+from app.images.models import ImageModel  # noqa: F401
 from app.models import Base
 from app.reviews.models import ReviewModel  # noqa: F401
 

@@ -2,9 +2,10 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import List
 
 from pydantic import BaseModel
+
+from app.images.schemas import ImageSchema
 
 
 class ExcursionType(Enum):
@@ -52,87 +53,13 @@ class ExcursionUpdateScheme(BaseModel):
     cities: list[str]
 
 
-class ItineraryItem(BaseModel):
-    """Item in itinerary."""
-
-    time: str | None = None
-    title: str
-    description: str | None = None
-
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
-
-
-class ExcursionDetailsBaseScheme(BaseModel):
-    """Base excursion details scheme."""
-
-    description: str | None = None
-    inclusions: List[str] | None = None
-    itinerary: List[ItineraryItem] | None = None
-    meeting_point: str | None = None
-    requirements: List[str] | None = None
-    recommendations: List[str] | None = None
-
-
-class ExcursionDetailsCreateScheme(ExcursionDetailsBaseScheme):
-    """Create excursion details scheme."""
-
-    pass
-
-
-class ExcursionDetailsUpdateScheme(BaseModel):
-    """Update excursion details scheme."""
-
-    description: str | None = None
-    inclusions: List[str] | None = None
-    itinerary: List[ItineraryItem] | None = None
-    meeting_point: str | None = None
-    requirements: List[str] | None = None
-    recommendations: List[str] | None = None
-
-
-class ExcursionDetailsScheme(ExcursionDetailsBaseScheme):
-    """Excursion details scheme."""
-
-    id: int
-    excursion_id: int
-
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
-
-
-class ExcursionImageSchema(BaseModel):
-    """Excursion image schema."""
-
-    id: int
-    excursion_id: int
-    url: str
-
-    class Config:
-        """Pydantic config."""
-
-        from_attributes = True
-
-
 class ExcursionScheme(ExcursionBaseScheme):
     """Excursion schema."""
 
     id: int
-
-    images: list[ExcursionImageSchema] | None
+    images: list[ImageSchema]
 
     class Config:
         """Pydantic config."""
 
         from_attributes = True
-
-
-class ExcursionFullScheme(ExcursionScheme):
-    """Full excursion scheme."""
-
-    details: ExcursionDetailsScheme | None = None
-    images: list[ExcursionImageSchema] | None = None
