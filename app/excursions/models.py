@@ -1,18 +1,20 @@
 """File with excursion models."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, TIMESTAMP, Enum, ForeignKey, Text
+from sqlalchemy import JSON, TIMESTAMP, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.excursions.schemas import (
-    ExcursionDetailsScheme,
-    ExcursionImageSchema,
     ExcursionScheme,
     ExcursionType,
-    ItineraryItem,
 )
 from app.models import Base
+
+if TYPE_CHECKING:
+    from app.details.models import DetailsModel
+    from app.images.models import ImageModel
 
 
 class ExcursionModel(Base):
@@ -50,14 +52,15 @@ class ExcursionModel(Base):
 
     cities: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=[])
 
-    images: Mapped[list["ExcursionImageModel"]] = relationship(
+    images: Mapped[list["ImageModel"]] = relationship(
+        "ImageModel",
         back_populates="excursion",
         cascade="all, delete-orphan",
         lazy="selectin",
     )
 
-    details: Mapped["ExcursionDetailsModel"] = relationship(
-        "ExcursionDetailsModel",
+    details: Mapped["DetailsModel"] = relationship(
+        "DetailsModel",
         back_populates="excursion",
         uselist=False,
         cascade="all, delete-orphan",
@@ -82,83 +85,4 @@ class ExcursionModel(Base):
 
     def __repr__(self) -> str:
         """Excursion model representation."""
-        return self.to_read_model().__repr__()
-
-
-class ExcursionImageModel(Base):
-    """Excursion image model.
-
-    Arttributes:
-        excursion_id: `int`
-        url: `str`
-    """
-
-    __tablename__ = "excursion_images"
-
-    excursion_id: Mapped[int] = mapped_column(
-        ForeignKey("excursions.id", ondelete="CASCADE"), nullable=False
-    )
-    url: Mapped[str] = mapped_column(nullable=False)
-
-    excursion: Mapped["ExcursionModel"] = relationship(back_populates="images")
-
-    def to_read_model(self) -> ExcursionImageSchema:
-        """Convert from excursion image model to pydantic schema."""
-        return ExcursionImageSchema(
-            id=self.id,
-            excursion_id=self.excursion_id,
-            url=self.url,
-        )
-
-    def __repr__(self) -> str:
-        """Excursion image model representation."""
-        return self.to_read_model().__repr__()
-
-
-class ExcursionDetailsModel(Base):
-    """Excursion details model.
-
-    Attributes:
-        excursion_id: `int`
-        description: `str`
-        inclusions: `list[str]`
-        itinerary: `list[ItineraryItem]`
-        meeting_point: `str`
-        requirements: `list[str]`
-        recommendations: `list[str]`
-    """
-
-    __tablename__ = "excursion_details"
-
-    excursion_id: Mapped[int] = mapped_column(
-        ForeignKey("excursions.id", ondelete="CASCADE"),
-        nullable=False,
-        unique=True,
-    )
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    inclusions: Mapped[list[str]] = mapped_column(JSON, nullable=True)
-    itinerary: Mapped[list[ItineraryItem]] = mapped_column(JSON, nullable=True)
-    meeting_point: Mapped[str] = mapped_column(nullable=True)
-    requirements: Mapped[list[str]] = mapped_column(JSON, nullable=True)
-    recommendations: Mapped[list[str]] = mapped_column(JSON, nullable=True)
-
-    excursion: Mapped["ExcursionModel"] = relationship(
-        "ExcursionModel", back_populates="details"
-    )
-
-    def to_read_model(self) -> ExcursionDetailsScheme:
-        """Convert from excursion details model to pydantic schema."""
-        return ExcursionDetailsScheme(
-            description=self.description,
-            inclusions=self.inclusions,
-            itinerary=self.itinerary,
-            meeting_point=self.meeting_point,
-            requirements=self.requirements,
-            recommendations=self.recommendations,
-            id=self.id,
-            excursion_id=self.excursion_id,
-        )
-
-    def __repr__(self) -> str:
-        """Excursion details model representation."""
         return self.to_read_model().__repr__()
