@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.depends import require_superuser
-from app.auth.schemas import UserSchema
 from app.config import settings
 from app.details.depends import get_details_service
 from app.details.exceptions import (
@@ -17,6 +16,7 @@ from app.details.schemas import (
 )
 from app.details.service import DetailsService
 from app.excursions.exceptions import ExcursionNotFoundError
+from app.user.schemas import UserSchema
 from app.utils.cache import cached
 
 details_router = APIRouter(tags=["Details"])

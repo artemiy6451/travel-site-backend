@@ -3,10 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.auth.depends import require_superuser
-from app.auth.schemas import UserSchema
 from app.reviews.depends import get_review_service
 from app.reviews.schemas import ReviewCreate, ReviewSchema
 from app.reviews.service import ReviewService
+from app.user.schemas import UserSchema
 
 reviews_router = APIRouter(prefix="/review", tags=["Reviews"])
 

@@ -1,169 +1,93 @@
-"""File with auth service."""
+"""Auth service rewritten to use server-side session cookies instead of JWT."""
 
-import datetime
-from typing import Optional
+import uuid
 
 from fastapi import HTTPException, status
-from jose import JWTError, jwt
 from loguru import logger
 from passlib.context import CryptContext
 
-from app.auth.models import UserModel
-from app.auth.schemas import Token, UserCreate, UserSchema
 from app.config import settings
-from app.database import async_session_maker
-from app.repository import SQLAlchemyRepository
-
-ALGORITHM = "HS256"
+from app.user.schemas import UserSchema
+from app.user.service import UserService
+from app.utils.redis_config import redis_client
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-class UserService:
-    """User service."""
+class AuthService:
+    """Auth service."""
 
     def __init__(self) -> None:
-        """Create user repository."""
-        self.repository: SQLAlchemyRepository[UserModel] = SQLAlchemyRepository(
-            async_session_maker, UserModel
-        )
-        logger.debug("Setup UserService with repository: {}", self.repository)
-
-    async def get_user_by_email(self, email: str) -> UserModel | None:
-        """Get user by email.
-
-        Args:
-            email: `str`
-
-        Return: `UserModel | None`
-        """
-        logger.debug("Find user by email: {}", email)
-        filter = UserModel.email == email
-        user = await self.repository.find_one(filter=filter)
-        logger.debug("Returning user: {!r}", user)
-        return user if user else None
-
-    async def create_user(self, user: UserCreate) -> UserSchema:
-        """Create user.
-
-        Args:
-            user: `UserCreate`
-
-        Return: `UserSchema`
-        """
-        logger.debug("Create user with data: {!r}", user)
-
-        exist_user = await self.get_user_by_email(user.email)
-        if exist_user:
-            logger.warning("User with email {!r} already exist", {exist_user.email})
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
-            )
-
-        userdata = {
-            "email": user.email,
-            "hashed_password": self.get_password_hash(user.password),
-        }
-        created_user = await self.repository.add_one(userdata)
-        logger.debug("User crated: {!r}", created_user)
-        return created_user.to_read_model()
+        self.user_service = UserService()
+        self.session_ttl = settings.session_cookie_max_age
 
     async def authenticate_user(self, email: str, password: str) -> UserSchema:
-        """Authentificate user.
-
-        Args:
-            email: `str`
-            password: `str`
-
-        Return: `UserSchema`
-        """
+        """Authenticate user and return schema on success."""
         logger.debug(
-            "Authentificate user with email={email!r} and password={password!r}",
-            email=email,
-            password=password,
+            "Authenticate user with email={}",
+            email,
         )
-        user = await self.get_user_by_email(email=email)
+        user = await self.user_service.get_user_by_email(email=email)
         if not user:
-            logger.warning(
-                "Can not find user in database: email={email!r}, password={password!r}",
-                email=email,
-                password=password,
-            )
+            logger.debug("User not found: {}", email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
             )
+
         if not self.verify_password(
             plain_password=password, hashed_password=user.hashed_password
         ):
-            logger.warning(
-                "Password hash doesn't match: email={email!r}, password={password!r}",
-                email=email,
-                password=password,
-            )
+            logger.debug("Password mismatch for {}", email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        return user.to_read_model()
+
+    def create_session(self, user: UserSchema) -> str:
+        """Create server-side session and return session id."""
+        session_id = uuid.uuid4().hex
+        redis_payload = {
+            "email": user.email,
+            "is_superuser": str(user.is_superuser),
+        }
+        # Store session in Redis with TTL
+        redis_client.hset(session_id, mapping=redis_payload)
+        redis_client.expire(session_id, self.session_ttl)
+        logger.debug("Created session {} for user {}", session_id, user.email)
+        return session_id
+
+    def destroy_session(self, session_id: str) -> None:
+        """Invalidate session."""
+        redis_client.delete(session_id)
+        logger.debug("Destroyed session {}", session_id)
+
+    async def get_user_by_session(self, session_id: str) -> UserSchema:
+        """Validate session and return user schema."""
+        payload = redis_client.hgetall(session_id)
+        if not payload:
+            logger.warning("Session not found or expired: {}", session_id)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+            )
+
+        email = payload.get("email")  # type: ignore
+        is_superuser = payload.get("is_superuser", "False") == "True"  # type: ignore
+        user = await self.user_service.get_user_by_email(email=email)  # type: ignore
+        if not user:
+            logger.warning("User from session not found: {}", email)
+            self.destroy_session(session_id)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
             )
 
         user_schema = user.to_read_model()
-        self.check_admin_user(user_schema)
+        user_schema.is_superuser = is_superuser
         return user_schema
-
-    def check_admin_user(self, user: UserSchema) -> bool:
-        """Check admin access for user.
-
-        Args:
-            user: `UserSchema`
-
-        Return: `bool`
-        """
-        logger.debug(
-            "Check admin access for user: {user!r}",
-            user=user,
-        )
-        if not user.is_superuser:
-            logger.warning(
-                "No admin privileges for user: {user!r}",
-                user=user,
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. Admin privileges required.",
-            )
-        return True
-
-    def get_token(self, user: UserSchema) -> Token:
-        """Get token for user.
-
-        Args:
-            user: `UserSchema`
-
-        Return: `Token`
-        """
-        logger.debug(
-            "Get token for user: {user!r}",
-            user=user,
-        )
-        access_token_expires = datetime.timedelta(
-            minutes=settings.access_token_expire_minutes
-        )
-        access_token = self.create_access_token(
-            data={
-                "sub": user.email,
-                "is_superuser": user.is_superuser,
-            },
-            expires_delta=access_token_expires,
-        )
-        token = Token(access_token=access_token, token_type="bearer")
-        logger.debug(
-            "Returning token: {token!r}",
-            token=token,
-        )
-        return token
 
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -174,38 +98,3 @@ class UserService:
     def get_password_hash(password: str) -> str:
         """Get password hash."""
         return pwd_context.hash(password)
-
-    @staticmethod
-    def create_access_token(
-        data: dict, expires_delta: Optional[datetime.timedelta] = None
-    ) -> str:
-        """Create access token."""
-        to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
-        else:
-            expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
-                hours=24
-            )
-        to_encode.update(
-            {"exp": expire, "is_superuser": data.get("is_superuser", False)}
-        )
-        encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
-        return encoded_jwt
-
-    @staticmethod
-    def verify_token(token: str) -> str:
-        """Verify token."""
-        credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        try:
-            payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-            email = payload.get("sub")
-            if email is None:
-                raise credentials_exception
-            return email
-        except JWTError:
-            raise credentials_exception from JWTError

@@ -2,8 +2,8 @@
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.auth.schemas import UserSchema
 from app.models import Base
+from app.user.schemas import UserSchema
 
 
 class UserModel(Base):
@@ -11,6 +11,7 @@ class UserModel(Base):
 
     Attributes:
         email: `str`
+        phone_number: `str`
         hashed_password: `str`
         is_active: `bool`
         is_superuser: `bool`

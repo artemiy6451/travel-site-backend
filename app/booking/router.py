@@ -5,11 +5,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth.depends import require_superuser
-from app.auth.schemas import UserSchema
 from app.booking.depends import get_booking_service
 from app.booking.exceptions import BookingNotFoundError
 from app.booking.schemas import BookingCreate, BookingSchema
 from app.booking.service import BookingService
+from app.user.schemas import UserSchema
 
 booking_router = APIRouter(tags=["Booking"])
 

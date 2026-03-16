@@ -5,7 +5,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth.depends import require_superuser
-from app.auth.schemas import UserSchema
 from app.config import settings
 from app.excursions.depends import get_excursion_service
 from app.excursions.exceptions import (
@@ -20,6 +19,7 @@ from app.excursions.schemas import (
     ExcursionUpdateScheme,
 )
 from app.excursions.service import ExcursionService
+from app.user.schemas import UserSchema
 from app.utils.cache import cached
 
 excursion_router = APIRouter(tags=["Excursion"])

@@ -1,17 +1,12 @@
-"""Auth dependencies."""
+"""Auth dependencies using cookie-based sessions."""
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from fastapi import Cookie, Depends, HTTPException, status
 from loguru import logger
 
-from app.auth.schemas import UserSchema
-from app.auth.service import ALGORITHM, UserService
-from app.config import settings
-
-security = HTTPBearer()
+from app.auth.service import AuthService, UserService
+from app.user.schemas import UserSchema
 
 
 async def get_user_service() -> UserService:
@@ -20,67 +15,32 @@ async def get_user_service() -> UserService:
     return UserService()
 
 
+async def get_auth_service() -> AuthService:
+    """Get auth service."""
+    logger.debug("Get auth service")
+    return AuthService()
+
+
 async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    service: Annotated[UserService, Depends(get_user_service)],
+    session_id: Annotated[str | None, Cookie(alias="session_id")],
+    service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> UserSchema:
-    """Get current user.
-
-    Args:
-    credentials: `HTTPAuthorizationCredentials`
-    service: `UserService`
-
-    Return: `UserSchema`
-    """
-    try:
-        payload = jwt.decode(
-            credentials.credentials, settings.secret_key, algorithms=[ALGORITHM]
+    """Return current user from session cookie."""
+    if not session_id:
+        logger.warning("Missing session cookie")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
         )
-        email = payload.get("sub")
-        if email is None:
-            logger.warning(
-                "Credentials doesn't contains email! Credetrials: {!r}", payload
-            )
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from JWTError
 
-        is_superuser: bool = payload.get("is_superuser", False)
-        logger.debug("Found email: {}, is user admin: {}", email, is_superuser)
-
-    except JWTError:
-        logger.warning("Can not validate user credentials!")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from JWTError
-
-    user = await service.get_user_by_email(email=email)
-    if user is None:
-        logger.warning("Can not validate user credentials!")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from JWTError
-
-    user.is_superuser = is_superuser
-    return user.to_read_model()
+    user = await service.get_user_by_session(session_id)
+    return user
 
 
 def require_superuser(
     current_user: Annotated[UserSchema, Depends(get_current_user)],
 ) -> UserSchema:
-    """Require superuser.
-
-    Args:
-    current_user: `UserSchema`
-
-    Return: `UserSchema`
-    """
+    """Require superuser."""
     if not current_user.is_superuser:
         logger.warning("Admin privileges required!")
         raise HTTPException(

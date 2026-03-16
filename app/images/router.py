@@ -3,11 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.auth.depends import require_superuser
-from app.auth.schemas import UserSchema
 from app.config import settings
 from app.images.depends import get_image_service
 from app.images.schemas import ImageSchema
 from app.images.service import ImageService
+from app.user.schemas import UserSchema
 from app.utils.cache import cached
 
 image_router = APIRouter(tags=["Image"])
