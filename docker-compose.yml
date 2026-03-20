@@ -24,26 +24,3 @@ services:
       driver: json-file
       options:
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
-
-  telegram-bot:
-    container_name: travelvv-bot
-    restart: always
-
-    network_mode: host
-
-    build:
-      context: .
-      dockerfile: Dockerfile
-
-    volumes:
-      - ./logs:/app/logs
-
-    environment:
-    - PYTHONPATH=/app
-
-    command: python -m app.telegram.main
-
-    logging:
-      driver: json-file
-      options:
-        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"

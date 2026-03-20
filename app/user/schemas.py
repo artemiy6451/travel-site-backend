@@ -1,5 +1,7 @@
 """File with auth schemas."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, field_validator
 
 MIN_PASSWORD_LEN = 8
@@ -15,6 +17,9 @@ class UserBase(BaseModel):
     """
 
     email: EmailStr
+    phone_number: str
+    first_name: str
+    last_name: str
 
 
 class UserCreate(UserBase):
@@ -65,7 +70,17 @@ class UserSchema(UserBase):
     is_active: bool
     is_superuser: bool
 
+    email_confirmed_at: datetime | None
+    phone_confirmed_at: datetime | None
+
     class Config:
         """Pydantic config."""
 
         from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    email: EmailStr
+    phone_number: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None

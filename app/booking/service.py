@@ -13,6 +13,7 @@ from app.database import async_session_maker
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcursionService
 from app.repository import SQLAlchemyRepository
+from app.user.schemas import UserSchema
 from app.utils.notifications import Notifications
 from app.utils.rabbitmq import rabbit_broker
 
@@ -26,6 +27,24 @@ class BookingService:
             SQLAlchemyRepository(async_session_maker, BookingModel)
         )
         self.excursion_service: ExcursionService = ExcursionService()
+
+    async def get_booking(self, booking_id: int) -> BookingSchema:
+        """Get booking by id.
+
+        Args:
+            booking_id: `int`
+
+        Return: `BookingSchema`
+
+        Raise: `BookingNotFoundError` if booking does not exist
+        """
+        booking = await self.booking_repository.find_one(
+            filter=BookingModel.id == booking_id
+        )
+        if booking is None:
+            raise BookingNotFoundError()
+
+        return booking.to_read_model()
 
     async def create_booking(self, booking: BookingCreate) -> BookingSchema:
         """Create a new booking.
@@ -67,46 +86,23 @@ class BookingService:
         )
         return [booking.to_read_model() for booking in bookings]
 
-    async def get_bookings_with_telegram_active(
-        self, excursion_id: int
-    ) -> list[BookingSchema]:
+    async def get_user_bookings(self, user: UserSchema) -> list[BookingSchema]:
+        filter_by = BookingModel.phone_number == user.phone_number
+
         bookings = await self.booking_repository.find_all(
-            filter_by=(
-                BookingModel.telegram_user_id.is_not(None)
-                & (BookingModel.excursion_id == excursion_id)
-                & (BookingModel.status == BookingStatus.CONFIRMED)
-            )
+            filter_by=filter_by,
+            order_by=BookingModel.created_at,
         )
         return [booking.to_read_model() for booking in bookings]
-
-    async def get_booking(self, booking_id: int) -> BookingSchema:
-        """Get booking by id.
-
-        Args:
-            booking_id: `int`
-
-        Return: `BookingSchema`
-
-        Raise: `BookingNotFoundError` if booking does not exist
-        """
-        booking = await self.booking_repository.find_one(
-            filter=BookingModel.id == booking_id
-        )
-        if booking is None:
-            raise BookingNotFoundError()
-
-        return booking.to_read_model()
 
     async def toggle_booking_status(
         self,
         booking_id: int,
-        telegram_user_id: int | None = None,
     ) -> BookingSchema:
         """Toggle booking status.
 
         Args:
             booking_id: `int`
-            telegram_user_id: `int | None` default None
 
         Return: `BookingSchema`
 
@@ -119,8 +115,6 @@ class BookingService:
         new_status = change_bookings_status(booking)
 
         data: dict[str, Any] = {"status": new_status}
-        if telegram_user_id is not None:
-            data["telegram_user_id"] = telegram_user_id
 
         new_booking = await self.booking_repository.update(
             where=BookingModel.id == booking_id,
@@ -137,58 +131,6 @@ class BookingService:
         )
 
         return formated_booking
-
-    async def save_telegram_message_id(
-        self,
-        booking_id: int,
-        telegram_message_id: int,
-    ) -> BookingSchema:
-        """Save telegram message id.
-
-        Args:
-            booking_id: `int`
-            telegram_message_id: `int`
-
-        Return: `BookingSchema`
-
-        Raise: `BookingNotFoundError` if booking does not exist
-        """
-        await self.get_booking(booking_id=booking_id)
-
-        new_booking = await self.booking_repository.update(
-            where=BookingModel.id == booking_id,
-            data={"telegram_message_id": telegram_message_id},
-        )
-        if new_booking is None:
-            raise BookingNotFoundError()
-
-        return new_booking.to_read_model()
-
-    async def save_telegram_user_chat_id(
-        self,
-        booking_id: int,
-        telegram_user_chat_id: int,
-    ) -> BookingSchema:
-        """Save telegram user chat id.
-
-        Args:
-            booking_id: `int`
-            telegram_user_chat_id: `int`
-
-        Return: `BookingSchema`
-
-        Raise: `BookingNotFoundError` if booking does not exist
-        """
-        await self.get_booking(booking_id=booking_id)
-
-        new_booking = await self.booking_repository.update(
-            where=BookingModel.id == booking_id,
-            data={"telegram_user_id": telegram_user_chat_id},
-        )
-        if new_booking is None:
-            raise BookingNotFoundError()
-
-        return new_booking.to_read_model()
 
     async def deactivate_past_bookings(self) -> None:
         """Deactivate past bookings.
