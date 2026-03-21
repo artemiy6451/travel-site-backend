@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Enum, ForeignKey
+from sqlalchemy import Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.booking.schemas import BookingSchema, BookingStatus
@@ -23,8 +23,6 @@ class BookingModel(Base):
         city: `str`
         created_at: `datetime`
         changed_at: `datetime`
-        telegram_user_id: `int`
-        telegram_message_id: `int`
     """
 
     __tablename__ = "bookings"
@@ -54,13 +52,6 @@ class BookingModel(Base):
         onupdate=datetime.now,
     )
 
-    telegram_user_id: Mapped[int | None] = mapped_column(
-        BigInteger, nullable=True, default=None
-    )
-    telegram_message_id: Mapped[int | None] = mapped_column(
-        BigInteger, nullable=True, default=None
-    )
-
     def to_read_model(self) -> BookingSchema:
         """Convert booking model to pydantic schema.
 
@@ -77,7 +68,5 @@ class BookingModel(Base):
             status=self.status,
             created_at=self.created_at,
             changed_at=self.changed_at,
-            telegram_user_id=self.telegram_user_id,
-            telegram_message_id=self.telegram_message_id,
             city=self.city,
         )

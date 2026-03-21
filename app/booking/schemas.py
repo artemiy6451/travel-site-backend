@@ -57,9 +57,6 @@ class BookingSchema(BookingCreate):
 
         created_at: `datetime`
         changed_at: `datetime`
-
-        telegram_user_id: `int | None`
-        telegram_message_id: `int | None`
     """
 
     id: int
@@ -67,9 +64,6 @@ class BookingSchema(BookingCreate):
 
     created_at: datetime
     changed_at: datetime
-
-    telegram_user_id: int | None
-    telegram_message_id: int | None
 
     class Config:
         """Pydantic config."""

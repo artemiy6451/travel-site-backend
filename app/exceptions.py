@@ -15,7 +15,3 @@ class ServiceError(AppError):
 
 class ApiError(AppError):
     """Api excection."""
-
-
-class TelegramBotError(AppError):
-    """Telegram bot exception."""

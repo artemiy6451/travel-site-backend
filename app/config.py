@@ -27,10 +27,6 @@ class Settings(BaseSettings):
 
     ttl: int = Field(default=300)
 
-    telegram_token: str = ""
-    telegram_chat_id: int = 0
-    telegram_admin_id: int = 0
-
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
