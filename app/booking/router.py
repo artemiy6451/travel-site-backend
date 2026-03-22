@@ -4,9 +4,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.auth.depends import require_superuser
+from app.auth.depends import get_current_user, require_superuser
 from app.booking.depends import get_booking_service
-from app.booking.exceptions import BookingNotFoundError
+from app.booking.exceptions import (
+    BookingAlreadyCancelledError,
+    BookingAlreadyConfirmedError,
+    BookingNotFoundError,
+)
 from app.booking.schemas import BookingCreate, BookingSchema
 from app.booking.service import BookingService
 from app.user.schemas import UserSchema
@@ -29,39 +33,59 @@ async def create_booking(
 
 
 @booking_router.get(
-    "/bookings",
+    "/booking/excursion/{excursion_id}",
     response_model=list[BookingSchema],
     status_code=status.HTTP_200_OK,
 )
-async def get_all_bookings(
+async def get_all_bookings_for_excursions(
     excursion_id: int,
     service: Annotated[BookingService, Depends(get_booking_service)],
     _: Annotated[UserSchema, Depends(require_superuser)],
 ) -> list[BookingSchema]:
     """Get all bookings with status CONFIRMED for one excursion."""
-    bookings = await service.get_all_confirmed_bookings_for_excursion(excursion_id)
+    bookings = await service.get_all_bookings_for_excursion(excursion_id)
     return bookings
 
 
-@booking_router.get(
-    "/booking/{id}/toggle",
+@booking_router.post(
+    "/booking/{booking_id}/confirm",
     response_model=BookingSchema,
     status_code=status.HTTP_200_OK,
-    responses={
-        404: {"detail": "Booking not found"},
-    },
 )
-async def booking_toggle(
-    id: int,
+async def confirm_booking(
+    booking_id: int,
     service: Annotated[BookingService, Depends(get_booking_service)],
-    _: Annotated[UserSchema, Depends(require_superuser)],
+    _: Annotated[UserSchema, Depends(get_current_user)],
 ) -> BookingSchema:
-    """Change booking status to `CANCELLED` or `CONFIRMED`."""
     try:
-        booking = await service.toggle_booking_status(booking_id=id)
-        return booking
-    except BookingNotFoundError as err:
+        return await service.confrim_booking(booking_id)
+    except (
+        BookingNotFoundError,
+        BookingAlreadyConfirmedError,
+    ) as e:
         raise HTTPException(
-            status_code=err.status_code,
-            detail=err.message,
-        ) from err
+            status_code=e.status_code,
+            detail=e.message,
+        ) from e
+
+
+@booking_router.post(
+    "/booking/{booking_id}/cancel",
+    response_model=BookingSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def cancel_booking(
+    booking_id: int,
+    service: Annotated[BookingService, Depends(get_booking_service)],
+    _: Annotated[UserSchema, Depends(get_current_user)],
+) -> BookingSchema:
+    try:
+        return await service.cancel_booking(booking_id)
+    except (
+        BookingNotFoundError,
+        BookingAlreadyCancelledError,
+    ) as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.message,
+        ) from e

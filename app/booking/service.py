@@ -1,14 +1,16 @@
 """File with booking service."""
 
 import asyncio
-from typing import Any
 
 from loguru import logger
 
-from app.booking.exceptions import BookingNotFoundError
+from app.booking.exceptions import (
+    BookingAlreadyCancelledError,
+    BookingAlreadyConfirmedError,
+    BookingNotFoundError,
+)
 from app.booking.models import BookingModel
 from app.booking.schemas import BookingCreate, BookingSchema, BookingStatus
-from app.booking.utils import change_bookings_status
 from app.database import async_session_maker
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcursionService
@@ -67,39 +69,65 @@ class BookingService:
         )
         return formated_booking
 
-    async def get_all_confirmed_bookings_for_excursion(
+    async def get_all_bookings_for_excursion(
         self, excursion_id: int
     ) -> list[BookingSchema]:
-        """Get all bookings with status CONFIRMED for one excursion.
+        """Get all bookings for one excursion.
 
         Args:
             excursion_id: `int`
 
         Return: `list[BookingSchema]`
         """
-        filter_by = (BookingModel.status == BookingStatus.CONFIRMED) & (
-            BookingModel.excursion_id == excursion_id
-        )
         bookings = await self.booking_repository.find_all(
-            filter_by=filter_by,
+            filter_by=BookingModel.excursion_id == excursion_id,
             order_by=BookingModel.created_at,
         )
         return [booking.to_read_model() for booking in bookings]
 
     async def get_user_bookings(self, user: UserSchema) -> list[BookingSchema]:
-        filter_by = BookingModel.phone_number == user.phone_number
-
         bookings = await self.booking_repository.find_all(
-            filter_by=filter_by,
+            filter_by=BookingModel.phone_number == user.phone_number,
             order_by=BookingModel.created_at,
         )
         return [booking.to_read_model() for booking in bookings]
 
-    async def toggle_booking_status(
-        self,
-        booking_id: int,
-    ) -> BookingSchema:
-        """Toggle booking status.
+    async def confrim_booking(self, booking_id: int) -> BookingSchema:
+        """Confirm booking.
+
+        Args:
+            booking_id: `int`
+
+        Return: `BookingSchema`
+
+        Raise:
+        `BookingAlreadyConfirmedError` if booking is already confirmed
+        `BookingNotFoundError` if booking does not exist
+        """
+
+        booking = await self.get_booking(booking_id)
+
+        if booking.status == BookingStatus.CONFIRMED:
+            raise BookingAlreadyConfirmedError()
+
+        confirmed_booking = await self.booking_repository.update(
+            where=BookingModel.id == booking_id,
+            data={"status": BookingStatus.CONFIRMED},
+        )
+
+        if confirmed_booking is None:
+            raise BookingNotFoundError()
+
+        parsed_booking = confirmed_booking.to_read_model()
+
+        excursion = await self.excursion_service.get_excursion(
+            parsed_booking.excursion_id
+        )
+        await self._change_people_left_by_booking_status(parsed_booking, excursion)
+        return parsed_booking
+
+    async def cancel_booking(self, booking_id: int) -> BookingSchema:
+        """Cancel booking.
 
         Args:
             booking_id: `int`
@@ -108,34 +136,32 @@ class BookingService:
 
         Raise: `BookingNotFoundError` if booking does not exist
         """
-        booking = await self.get_booking(booking_id=booking_id)
+        booking = await self.get_booking(booking_id)
 
-        excursion = await self.excursion_service.get_excursion(booking.excursion_id)
+        if booking.status == BookingStatus.CANCELLED:
+            raise BookingAlreadyCancelledError()
 
-        new_status = change_bookings_status(booking)
-
-        data: dict[str, Any] = {"status": new_status}
-
-        new_booking = await self.booking_repository.update(
+        cancelled_booking = await self.booking_repository.update(
             where=BookingModel.id == booking_id,
-            data=data,
+            data={"status": BookingStatus.CANCELLED},
         )
-        if new_booking is None:
+
+        if cancelled_booking is None:
             raise BookingNotFoundError()
 
-        formated_booking = new_booking.to_read_model()
+        parsed_booking = cancelled_booking.to_read_model()
 
-        await self._change_people_left_by_booking_status(
-            booking=formated_booking,
-            excursion=excursion,
+        excursion = await self.excursion_service.get_excursion(
+            parsed_booking.excursion_id
         )
+        await self._change_people_left_by_booking_status(parsed_booking, excursion)
 
-        return formated_booking
+        return parsed_booking
 
     async def deactivate_past_bookings(self) -> None:
         """Deactivate past bookings.
 
-        Deactivate all bookings with status CANCELLED or CONFIRMED.
+        Deactivate all bookings with status CANCELLED, CONFIRMED or PENDING.
 
         Return: `None`
         """
@@ -145,8 +171,7 @@ class BookingService:
 
         for excursion in excursions:
             where = (BookingModel.excursion_id == excursion.id) & (
-                (BookingModel.status == BookingStatus.CANCELLED)
-                | (BookingModel.status == BookingStatus.CONFIRMED)
+                BookingModel.status != BookingStatus.EXPIRED
             )
             bookings = await self.booking_repository.update_all(
                 where=where, data={"status": BookingStatus.EXPIRED}
