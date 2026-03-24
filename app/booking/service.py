@@ -14,10 +14,9 @@ from app.booking.schemas import BookingCreate, BookingSchema, BookingStatus
 from app.database import async_session_maker
 from app.excursions.schemas import ExcursionScheme
 from app.excursions.service import ExcursionService
+from app.notifications.service import NotificationService
 from app.repository import SQLAlchemyRepository
 from app.user.schemas import UserSchema
-from app.utils.notifications import Notifications
-from app.utils.rabbitmq import rabbit_broker
 
 
 class BookingService:
@@ -29,6 +28,7 @@ class BookingService:
             SQLAlchemyRepository(async_session_maker, BookingModel)
         )
         self.excursion_service: ExcursionService = ExcursionService()
+        self.notification_service: NotificationService = NotificationService()
 
     async def get_booking(self, booking_id: int) -> BookingSchema:
         """Get booking by id.
@@ -63,7 +63,7 @@ class BookingService:
         formated_booking = new_booking.to_read_model()
 
         asyncio.create_task(
-            self._send_booking_notification(
+            self.notification_service.notify_admins_about_booking(
                 booking=formated_booking, excursion=excursion
             )
         )
@@ -198,27 +198,4 @@ class BookingService:
         else:
             excursion = await self.excursion_service.change_people_left_count(
                 excursion.id, -booking.total_people
-            )
-
-    async def _send_booking_notification(
-        self,
-        booking: BookingSchema,
-        excursion: ExcursionScheme,
-    ) -> None:
-        """Send booking notification.
-
-        Send booking notification to rabbitmq queue `bookings`.
-
-        Args:
-            booking: `BookingSchema`
-            excursion: `ExcursionScheme`
-
-        Return: `None`
-        """
-        async with Notifications(broker=rabbit_broker, queue="bookings") as ns:
-            await ns.send_to_rabbit(
-                [
-                    booking.model_dump_json(),
-                    excursion.model_dump_json(),
-                ]
             )

@@ -3,22 +3,38 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class NotificatoinSchema(BaseModel):
+class NotificationSchema(BaseModel):
     user_id: int
     type: str
     message: str
 
 
-class CreateNotificationSchema(NotificatoinSchema):
+class CreateNotificationSchema(NotificationSchema):
     pass
 
 
-class UpdateNotificationSchema(NotificatoinSchema):
+class BulkNotificationSchema(BaseModel):
+    phone_numbers: list[str]
+    message: str
+    type: str = "custom"
+
+
+class BulkReminderSchema(BaseModel):
+    phone_numbers: list[str]
+    excursion_id: int
+    days_before: int = 2
+
+
+class UpdateNotificationSchema(BaseModel):
     id: int
-    is_read: bool
+    user_id: int
+    is_read: bool = True
 
 
-class NotificationBaseSchema(NotificatoinSchema):
+class NotificationBaseSchema(NotificationSchema):
     id: int
     is_read: bool
     created_at: datetime
+
+    class Config:
+        from_attributes = True
