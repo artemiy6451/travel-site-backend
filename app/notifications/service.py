@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 
@@ -246,6 +248,7 @@ class NotificationService:
 
     @staticmethod
     def _format_reminder_message(excursion: ExcursionScheme, days_before: int) -> str:
+        days_before = (excursion.date - datetime.now()).days
         date_part = excursion.date.strftime("%d.%m.%Y %H:%M")
         city_part = excursion.cities[0] if excursion.cities else "уточните место встречи"
         return (
